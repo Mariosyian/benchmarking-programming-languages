@@ -2,6 +2,8 @@
 
 COMP30040 - 3rd Year Project - Benchmarking Programming Languages by Marios Yiannakou.
 
+Supervisor: Bijan Parsia (bijan.parsia@manchester.ac.uk)
+
 # Introduction
 This project tackles/investigates the [*The Computer Language Benchmarks Game (Wikipedia)*](https://en.wikipedia.org/wiki/The_Computer_Language_Benchmarks_Game). An open-source software project, whose aim is to compare the implementations of a subset of simple algorithms in a plethora of programming languages, and determine (based on predetermined metrics) which is fastest in producing a result.
 
