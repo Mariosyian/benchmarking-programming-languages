@@ -1,0 +1,6 @@
+# User specific vs-code settings
+.vscode/
+# PyEnv version file
+.python-version
+# pytest coverage report
+.coverage
