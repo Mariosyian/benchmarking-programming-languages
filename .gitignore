@@ -5,4 +5,4 @@
 # pytest coverage report
 .coverage
 # Python cache
-**/__pycache/
+**/__pycache__/
