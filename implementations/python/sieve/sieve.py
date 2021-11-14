@@ -13,16 +13,6 @@ returns:
 author: Marios Yiannakou
 """
 
-# Historical data for validating our results - the number of primes to be found under
-# some limit, such as 168 primes under 1000.
-known = {
-    1: 0,
-    10: 4,
-    100: 25,
-    1000: 168,
-    10000: 1229,
-}
-
 
 def is_prime(num):
     """
@@ -55,6 +45,9 @@ def sieve(upper_bound):
     :returns: An unsorted set of all the prime numbers that are less or equal to
         `upper_bound`.
     """
+    if upper_bound == 0 or upper_bound == 1:
+        return []
+
     primes = set()
     non_primes = set()
     for i in range(2, upper_bound + 1):
