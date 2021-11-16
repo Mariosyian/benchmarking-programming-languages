@@ -61,8 +61,10 @@ BENCHMARKS_FILE="${BENCHMARKS_DIR}/benchmarks"
 
 DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
 SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
+JUNIT="${DEPENDENCIES_DIR}/junit/junit-4.10.jar"
+HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
 
-LANGUAGES=(python go)
+LANGUAGES=(python java)
 ALGORITHMS=(sieve)
 
 INTERVAL=1
@@ -98,12 +100,12 @@ function time_taken() {
     # Get the command output and cut the top line (header line)
     { python $SYRUPY -S -C --no-raw-process-log "$@" 2> /dev/null; } | sed 1d > $TEMP_FILE
 
-    ELAPSED_TIME=$(tail $TEMP_FILE -n 1 | awk '{print $4}')
+    LAST_LINE=$(tail $TEMP_FILE -n 1)
+    ELAPSED_TIME=$(echo $LAST_LINE | awk '{print $4}')
+    AVERAGE_CPU=$(float_to_int $(echo $LAST_LINE | awk '{print $5}'))
+    AVERAGE_RSS=$(echo $LAST_LINE | awk '{print $7}')
+    AVERAGE_VMS=$(echo $LAST_LINE | awk '{print $8}')
 
-    AVERAGE_CPU=0
-    AVERAGE_RAM=0
-    AVERAGE_RSS=0
-    AVERAGE_VMS=0
     # Cut the last line from the file as it is only used for the total elapsed time
     # of the process under investigation.
     # Accumulate the sum of all readings for each measurement
@@ -139,20 +141,22 @@ function time_taken() {
     echo $ELAPSED_TIME
 }
 
+# TODO: Add --test flag? to run tests before running benchmarks?
 echo -e "\tLANGUAGE\t|\tALGORITHM\t|\tELAPSED (s)\t|\tAvg. CPU (%)\t|\tAvg. RSS (KB)\t|\tAvg. VMS (KB)" > $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
     cd $PROGRAMS_DIR/$language
-    EXTENSION=${EXTENSIONS[${language}]}
 
     for algorithm in "${ALGORITHMS}"; do
         cd $algorithm
 
-        if [ $language == "go" ]
+        if [ $language == "java" ]
         then
+            # Compile
+            javac -cp .:$JUNIT:$HAMCREST *.java
             # Run algorithm
-            COMMAND="go run ."
+            COMMAND="java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_run"
             # Run tests
-            # TODO
+            # java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_test
         elif [ $language == "python" ]
         then
             COMMAND="python ${algorithm}_run.py"
