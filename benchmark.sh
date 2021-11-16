@@ -64,7 +64,7 @@ SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
 JUNIT="${DEPENDENCIES_DIR}/junit/junit-4.10.jar"
 HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
 
-LANGUAGES=(python rust go java)
+LANGUAGES=(rust go java python)
 ALGORITHMS=(sieve)
 
 INTERVAL=1
