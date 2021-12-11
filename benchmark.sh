@@ -62,11 +62,8 @@ BENCHMARKS_FILE="${BENCHMARKS_DIR}/benchmarks"
 DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
 SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
 
-LANGUAGES=(python)
+LANGUAGES=(python rust)
 ALGORITHMS=(sieve)
-
-EXTENSIONS=(["python"]="py")
-# EXTENSIONS["c"]="c"
 
 INTERVAL=1
 
