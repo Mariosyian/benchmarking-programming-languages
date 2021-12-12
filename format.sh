@@ -1,6 +1,9 @@
+echo "========== FORMAT CHECK =========="
 # Python (black)
-black --check . 2>&1 | grep "would reformat" | awk '{print $3}' > tmp
-black $(tr '\n' ' ' < tmp)
+echo "Formatting python files using black"
+black .
+# Rust (rustfmt)
+echo "Formatting rust files using rustfmt"
+rustfmt implementations/rust/**/*.rs
 
-# Cleanup
-rm tmp
+echo "=================================="

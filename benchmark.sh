@@ -128,7 +128,7 @@ function time_taken() {
     fi
 
     # Print the results into the benchmark file
-    echo -e "\t${language}\t\t|\t${algorithm}\t\t|\t${ELAPSED_TIME}\t\t|\t${AVERAGE_CPU}\t\t|\t${AVERAGE_RSS}\t\t|\t${AVERAGE_VMS}\t\t" >> $BENCHMARKS_FILE
+    echo -e "${language}|${algorithm}|${ELAPSED_TIME}|${AVERAGE_CPU}|${AVERAGE_RSS}|${AVERAGE_VMS}" >> $BENCHMARKS_FILE
 
     # Cleanup
     # - Delete temporary file(s)
@@ -139,7 +139,7 @@ function time_taken() {
     echo $ELAPSED_TIME
 }
 
-echo -e "\tLANGUAGE\t|\tALGORITHM\t|\tELAPSED (s)\t|\tAvg. CPU (%)\t|\tAvg. RSS (KB)\t|\tAvg. VMS (KB)" > $BENCHMARKS_FILE
+echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)" > $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
     cd $PROGRAMS_DIR/$language
     EXTENSION=${EXTENSIONS[${language}]}
@@ -147,12 +147,30 @@ for language in "${LANGUAGES[@]}"; do
     for algorithm in "${ALGORITHMS}"; do
         cd $algorithm
 
-        echo -n "Running ${language}/${algorithm}..."
-        TIME_TAKEN=$(time_taken $language ${PROGRAMS_DIR}/${language}/${algorithm}/${algorithm}_run.${EXTENSION})
-        echo $TIME_TAKEN
+        if [ $language == "rust" ]
+        then
+            # Compile
+            rustc "${algorithm}_run.rs" -o "${algorithm}_run"
+            # Run algorithm
+            COMMAND="./${algorithm}_run"
+            # Run tests
+            # rustc --test "${algorithm}_test.rs" -o "${algorithm}_test"
+            # ./${algorithm}_test
+        elif [ $language == "python" ]
+        then
+            COMMAND="python ${algorithm}_run.py"
+        fi
 
+        echo -ne "[${language}/${algorithm}]\t..."
+        if [[ $COMMAND == *" "* ]]; then
+            TIME_TAKEN=$(time_taken $language $COMMAND)
+        else
+            TIME_TAKEN=$(time_taken $COMMAND)
+        fi
+        echo $TIME_TAKEN
         cd ..
         sleep $INTERVAL
     done
 done
-cd $PROGRAMS_DIR
+cd $CURRENT_DIR
+cat $BENCHMARKS_FILE | column -t -s '|' | tee $BENCHMARKS_FILE
