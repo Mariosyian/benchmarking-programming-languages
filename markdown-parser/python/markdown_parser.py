@@ -74,7 +74,11 @@ class MarkdownParser:
                 self.previous_line = line
                 continue
 
-            special_characters = re.match(r"[^a-zA-Z0-9 '\"]*", line)
+            if self.previous_line == "":
+                self.raw_html += f"\n</{self.html_elements.pop()}>\n"
+
+            special_characters = re.finditer(r"[^a-zA-Z0-9 '\"]*", line)
+            special_characters = [match for match in special_characters if match.group()]
             if not special_characters:
                 if not self.previous_line or self.previous_line == "":
                     self.raw_html += f"<p>"
@@ -84,9 +88,6 @@ class MarkdownParser:
                 self.parse_special_characters(line, special_characters)
             
             self.previous_line = line
-
-            if self.previous_line == "":
-                self.raw_html += f"\n</{self.html_elements.pop()}>"
 
         while self.html_elements:
             self.raw_html += f"\n</{self.html_elements.pop()}>"
@@ -98,14 +99,46 @@ class MarkdownParser:
         :param line: The line to be parsed.
         :param matched_regex: The regex that was matched.
         """
-        special_characters = matched_regex.group()
-        length = len(special_characters)
-        if length == 0:
+        if len(matched_regex) == 0:
             return
 
-        if special_characters[0] == "#":
-            tag = "h6" if length >= 6 else f"h{length}"
-            self.raw_html += f"<{tag}>{line[length:].strip()}</{tag}>"
+        regex = matched_regex.pop(0)
+        # Starting and ending (non-inclusive) index of special characters in `line`
+        span_start, span_end = regex.span()
+        special_chars = regex.string[span_start:span_end]
+        special_chars_length = len(special_chars)
+
+        if special_chars[0] == "#":
+            line = line[special_chars_length:].strip()
+            tag = "<h6>" if special_chars_length >= 6 else f"<h{special_chars_length}>"
+            self.raw_html += f"{tag}"
+            closing_tag = "</h6>" if special_chars_length >= 6 else f"</h{special_chars_length}>\n"
+        elif special_chars[0] == "*":
+            # No new line at the end as these could be inline
+            line = line[special_chars_length:len(line)-special_chars_length].strip()
+            if special_chars_length == 1:
+                self.raw_html += f"<i>"
+                closing_tag = "</i>"
+            elif special_chars_length == 2:
+                self.raw_html += f"<b>"
+                closing_tag = "</b>"
+            elif special_chars_length == 3:
+                self.raw_html += f"<b><i>"
+                closing_tag = "</i></b>"
+            # Pop the matched regex again as patterns that require opening and closing
+            # patterns produce two matching elements, and are displayed twice
+            matched_regex.pop(0)
+
+        if len(matched_regex):
+            next_regex_start, _ = matched_regex[0].span()
+            next_regex_start = next_regex_start - len(matched_regex[0].group(0)) + special_chars_length
+            self.raw_html += f"{line[:next_regex_start]}"
+            self.parse_special_characters(line[next_regex_start:], matched_regex)
+        else:
+            self.raw_html += f"{line}"
+            self.parse_special_characters(line, matched_regex)
+        self.raw_html += closing_tag
+        
 
 
 parser = MarkdownParser(
@@ -113,6 +146,10 @@ parser = MarkdownParser(
 to be parsed in the markdown parser
 
 # This line should be an h1 header
-**this line should be bold**""",
+#### This line should be an h4 header
+####### This line should be an h6 header
+**this line should be bold**
+*this line should be italic*
+# This line should be an h1 header with ***bold and italic text***""",
     True,
 )
