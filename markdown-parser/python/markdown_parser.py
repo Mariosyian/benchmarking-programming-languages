@@ -11,6 +11,7 @@ class MarkdownParser:
 
     @author Marios Yiannakou
     """
+
     # Used to keep track of multiline blocks e.g. paragraph
     previous_line = None
     # Stack to keep track of the HTML elements opened.
@@ -36,7 +37,7 @@ class MarkdownParser:
                 raise FileNotFoundError("The file provided was not found.")
 
         self.html_elements = []
-        self.raw_html = f"<html>\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"author\" content=\"Marios Yiannakou\">\n</head>\n<body>\n"
+        self.raw_html = f'<html>\n<head>\n<meta charset="utf-8">\n<meta name="author" content="Marios Yiannakou">\n</head>\n<body>\n'
         self._read_file(content, string)
 
     def _read_file(self, filename: str, string: bool) -> None:
@@ -76,7 +77,7 @@ class MarkdownParser:
         :param content: A string to be parsed with markdown rules.
         :returns: The parsed content as HTML.
         """
-        # TODO: regex *[a-zA-Z0-9]*\n, remove only last \n  
+        # TODO: regex *[a-zA-Z0-9]*\n, remove only last \n
         #       Splitting on "\n" might have unwanted consequences
         for line in content.split("\n"):
             line = line.strip()
@@ -88,7 +89,9 @@ class MarkdownParser:
                 self.raw_html += f"\n</{self.html_elements.pop()}>\n"
 
             special_characters = re.finditer(r"[^a-zA-Z0-9 '\"]*", line)
-            special_characters = [match for match in special_characters if match.group()]
+            special_characters = [
+                match for match in special_characters if match.group()
+            ]
             if not special_characters:
                 if not self.previous_line or self.previous_line == "":
                     self.raw_html += f"<p>"
@@ -96,7 +99,7 @@ class MarkdownParser:
                 self.raw_html += f"\n{line}"
             else:
                 self.parse_special_characters(line, special_characters)
-            
+
             self.previous_line = line
 
         while self.html_elements:
@@ -122,7 +125,11 @@ class MarkdownParser:
             line = line[special_chars_length:].strip()
             tag = "<h6>" if special_chars_length >= 6 else f"<h{special_chars_length}>"
             self.raw_html += tag
-            closing_tag = "</h6>" if special_chars_length >= 6 else f"</h{special_chars_length}>\n"
+            closing_tag = (
+                "</h6>"
+                if special_chars_length >= 6
+                else f"</h{special_chars_length}>\n"
+            )
         elif special_chars[0] == "*":
             # No new line at the end as these could be inline
 
@@ -146,7 +153,7 @@ class MarkdownParser:
                 self.raw_html += f"<b>{content}</b>"
             elif special_chars_length == 3:
                 self.raw_html += f"<b><i>{content}</i></b>"
-            line = line[content_length + special_chars_length:]
+            line = line[content_length + special_chars_length :]
             closing_tag = None
         elif special_chars[0] == "_":
             try:
@@ -160,28 +167,32 @@ class MarkdownParser:
             content = line[special_chars_length:content_length].strip()
 
             self.raw_html += f'<p style="text-decoration: underline;">{content}</p>'
-            line = line[content_length + special_chars_length:]
+            line = line[content_length + special_chars_length :]
             closing_tag = None
 
         # Send the substring that contains more markdown content to be parsed again
         # e.g. # An h1 header with **bold text**
         if len(matched_regex):
             next_regex_start, _ = matched_regex[0].span()
-            next_regex_start = next_regex_start - len(matched_regex[0].group(0)) + special_chars_length
+            next_regex_start = (
+                next_regex_start - len(matched_regex[0].group(0)) + special_chars_length
+            )
             self.raw_html += line[:next_regex_start]
             self.parse_special_characters(line[next_regex_start:], matched_regex)
         else:
             self.raw_html += line
             self.parse_special_characters(line, matched_regex)
-        
+
         # Some regexes might finish before the actual line does thus,
         # `closing_tag` might be `None`
         # e.g. # This line is an h1 header with ***bold and italic text*** and more normal text
         #      </i></b> closes before the end of the line so `closing_tag` is `None`.
         if closing_tag:
             self.raw_html += closing_tag
-        
-    def validate_regex(self, current_regex: re.Match, popped_regex: re.Match) -> Union[re.Match, None]:
+
+    def validate_regex(
+        self, current_regex: re.Match, popped_regex: re.Match
+    ) -> Union[re.Match, None]:
         """
         Validates that the popped regex matches the current regex to ensure that both
         special characters are of the same type. Raises an exception
@@ -202,21 +213,25 @@ class MarkdownParser:
 
         e.g. **This line is bold
              This line is italic*
-        
+
         will result in
 
         <p>**This line is bold
         This line is italic*
         </p>
-        
+
         :param line: The line to append to the parsed content.
         """
         # Only append the <p> element if the latest one is not already a <p> element.
-        if not self.html_elements or self.html_elements[len(self.html_elements)-1] != "p":
+        if (
+            not self.html_elements
+            or self.html_elements[len(self.html_elements) - 1] != "p"
+        ):
             self.raw_html += f"<p>{line}"
             self.html_elements.append("p")
         else:
             self.raw_html += f"\n{line}"
+
 
 parser = MarkdownParser(
     """This is a multiline input
