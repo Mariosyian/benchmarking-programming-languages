@@ -47,6 +47,8 @@ def sieve(upper_bound):
     """
     if upper_bound == 0 or upper_bound == 1:
         return []
+    elif upper_bound == 2:
+        return [2]
 
     primes = set()
     non_primes = set()
