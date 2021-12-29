@@ -62,7 +62,7 @@ BENCHMARKS_FILE="${BENCHMARKS_DIR}/benchmarks"
 DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
 SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
 
-LANGUAGES=(python go)
+LANGUAGES=(python rust go)
 ALGORITHMS=(sieve)
 
 INTERVAL=1
@@ -128,7 +128,7 @@ function time_taken() {
     fi
 
     # Print the results into the benchmark file
-    echo -e "\t${language}\t\t|\t${algorithm}\t\t|\t${ELAPSED_TIME}\t\t|\t${AVERAGE_CPU}\t\t|\t${AVERAGE_RSS}\t\t|\t${AVERAGE_VMS}" >> $BENCHMARKS_FILE
+    echo -e "${language}|${algorithm}|${ELAPSED_TIME}|${AVERAGE_CPU}|${AVERAGE_RSS}|${AVERAGE_VMS}" >> $BENCHMARKS_FILE
 
     # Cleanup
     # - Delete temporary file(s)
@@ -139,7 +139,7 @@ function time_taken() {
     echo $ELAPSED_TIME
 }
 
-echo -e "\tLANGUAGE\t|\tALGORITHM\t|\tELAPSED (s)\t|\tAvg. CPU (%)\t|\tAvg. RSS (KB)\t|\tAvg. VMS (KB)" > $BENCHMARKS_FILE
+echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)" > $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
     cd $PROGRAMS_DIR/$language
     EXTENSION=${EXTENSIONS[${language}]}
@@ -147,7 +147,16 @@ for language in "${LANGUAGES[@]}"; do
     for algorithm in "${ALGORITHMS}"; do
         cd $algorithm
 
-        if [ $language == "go" ]
+        if [ $language == "rust" ]
+        then
+            # Compile
+            rustc "${algorithm}_run.rs" -o "${algorithm}_run"
+            # Run algorithm
+            COMMAND="./${algorithm}_run"
+            # Run tests
+            # rustc --test "${algorithm}_test.rs" -o "${algorithm}_test"
+            # ./${algorithm}_test
+        elif [ $language == "go" ]
         then
             # Run algorithm
             COMMAND="go run ."
@@ -158,10 +167,9 @@ for language in "${LANGUAGES[@]}"; do
             COMMAND="python ${algorithm}_run.py"
         fi
 
-        echo -n "Running ${language}/${algorithm}..."
+        echo -ne "[${language}/${algorithm}]\t..."
         TIME_TAKEN=$(time_taken ${COMMAND})
         echo $TIME_TAKEN
-
         cd ..
         sleep $INTERVAL
     done
