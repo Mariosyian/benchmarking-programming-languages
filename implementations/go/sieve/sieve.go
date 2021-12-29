@@ -62,6 +62,11 @@ func elementExists(element int, array []int) bool {
 // returns {[]int} An unsorted array of all the prime numbers that are less or equal to
 //     `upperBound`.
 func sieve(upperBound int) []int {
+	if upperBound == 0 || upperBound == 1 {
+		return []int{}
+	} else if upperBound == 2 {
+		return []int{2}
+	}
 	// As of today 28/12/2021 Go does not natively support sets
 	var primes []int
 	var nonPrimes []int

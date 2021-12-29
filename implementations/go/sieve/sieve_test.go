@@ -112,7 +112,7 @@ func TestIsPrimeReturnsFalseForNonPrimeNumbers(t *testing.T) {
 func TestSieveReturnsTheCorrectNumberOfPrimeNumbersGivenN(t *testing.T) {
 	// Known number of prime numbers given the dictionary key as an upper bound.
 	// limits = { 1: 0, 10 : 4, 100 : 25, 1000 : 168, 10000 : 1229, 100000 : 9592, 1000000 : 78498, 10000000 : 664579, 100000000 : 5761455 }
-	limits := map[int]int{1: 0, 10: 4, 100: 25, 1000: 168, 10000: 1229}
+	limits := map[int]int{0: 0, 1: 0, 2: 1, 10: 4, 100: 25, 1000: 168, 10000: 1229}
 	for limit := range limits {
 		var result int = len(sieve(limit))
 		if result != limits[limit] {
@@ -124,7 +124,9 @@ func TestSieveReturnsTheCorrectNumberOfPrimeNumbersGivenN(t *testing.T) {
 func TestSieveReturnsTheCorrectListOfPrimeNumbersGivenN(t *testing.T) {
 	// Known list of prime numbers given the dictionary key as an upper bound.
 	var limits = map[int][]int{
+		0:  {},
 		1:  {},
+		2:  {2},
 		10: {2, 3, 5, 7},
 		100: {
 			2,
