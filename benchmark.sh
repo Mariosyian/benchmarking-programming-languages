@@ -78,12 +78,11 @@ function float_to_int() {
     printf "%.0f\n" "$1"
 }
 
-# Calculates the processes elapsed time, CPU usage, and the RSS and VMS in KB
+# Calculates the processes elapsed time (s), CPU usage (%), the RSS (KB), and VMS (KB)
 # using the `syrupy` script. The function then writes the results to the benchmarks
 # file.
 #
 # Parameters:
-#   - The language being used (language command e.g. `python` for python).
 #   - The command to be run.
 # Returns:
 #   The elapsed time between the execution of the given command and the time it finished.
