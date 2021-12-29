@@ -33,7 +33,9 @@ fn test_is_prime_returns_false_for_non_prime_numbers() {
 fn test_sieve_returns_the_correct_number_of_prime_numbers_given_n() {
     // Known number of prime numbers given the dictionary key as an upper bound.
     let mut limits = HashMap::new();
+    limits.insert(0, 0);
     limits.insert(1, 0);
+    limits.insert(2, 1);
     limits.insert(10, 4);
     limits.insert(100, 25);
     limits.insert(1000, 168);
@@ -47,7 +49,9 @@ fn test_sieve_returns_the_correct_number_of_prime_numbers_given_n() {
 fn test_sieve_returns_the_correct_list_of_prime_numbers_given_n() {
     // Known list of prime numbers given the dictionary key as an upper bound.
     let mut limits = HashMap::new();
+    limits.insert(0, vec![]);
     limits.insert(1, vec![]);
+    limits.insert(2, vec![2]);
     limits.insert(10, vec![2, 3, 5, 7]);
     limits.insert(
         100,

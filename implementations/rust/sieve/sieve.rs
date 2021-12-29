@@ -48,6 +48,12 @@ pub fn is_prime(num: u32) -> bool {
  *     `upper_bound`.
  */
 pub fn sieve(upper_bound: u32) -> HashSet<u32> {
+    if upper_bound == 0 || upper_bound == 1 {
+        return HashSet::new();
+    } else if upper_bound == 2 {
+        return HashSet::from([2]);
+    }
+
     let mut primes: HashSet<u32> = HashSet::new();
     let mut non_primes: HashSet<u32> = HashSet::new();
 
