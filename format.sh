@@ -1,6 +1,8 @@
+echo "========== FORMAT CHECK =========="
 # Python (black)
-black --check . 2>&1 | grep "would reformat" | awk '{print $3}' > tmp
-black $(tr '\n' ' ' < tmp)
-
-# Cleanup
-rm tmp
+echo "Formatting python files using black"
+black .
+# Go (gofmt)
+echo "Formatting go files using gofmt"
+gofmt -w .
+echo "=================================="
