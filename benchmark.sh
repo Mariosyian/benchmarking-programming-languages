@@ -62,11 +62,8 @@ BENCHMARKS_FILE="${BENCHMARKS_DIR}/benchmarks"
 DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
 SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
 
-LANGUAGES=(python)
+LANGUAGES=(python go)
 ALGORITHMS=(sieve)
-
-EXTENSIONS=(["python"]="py")
-# EXTENSIONS["c"]="c"
 
 INTERVAL=1
 
@@ -99,7 +96,7 @@ function time_taken() {
     TEMP_FILE="tmp_bench"
     
     # Get the command output and cut the top line (header line)
-    { python $SYRUPY -S -C --no-raw-process-log $1 $2 2> /dev/null; } | sed 1d > $TEMP_FILE
+    { python $SYRUPY -S -C --no-raw-process-log "$@" 2> /dev/null; } | sed 1d > $TEMP_FILE
 
     ELAPSED_TIME=$(tail $TEMP_FILE -n 1 | awk '{print $4}')
 
@@ -131,7 +128,7 @@ function time_taken() {
     fi
 
     # Print the results into the benchmark file
-    echo -e "\t${language}\t\t|\t${algorithm}\t\t|\t${ELAPSED_TIME}\t\t|\t${AVERAGE_CPU}\t\t|\t${AVERAGE_RSS}\t\t|\t${AVERAGE_VMS}\t\t" >> $BENCHMARKS_FILE
+    echo -e "\t${language}\t\t|\t${algorithm}\t\t|\t${ELAPSED_TIME}\t\t|\t${AVERAGE_CPU}\t\t|\t${AVERAGE_RSS}\t\t|\t${AVERAGE_VMS}" >> $BENCHMARKS_FILE
 
     # Cleanup
     # - Delete temporary file(s)
@@ -150,8 +147,19 @@ for language in "${LANGUAGES[@]}"; do
     for algorithm in "${ALGORITHMS}"; do
         cd $algorithm
 
+        if [ $language == "go" ]
+        then
+            # Run algorithm
+            COMMAND="go run ."
+            # Run tests
+            # TODO
+        elif [ $language == "python" ]
+        then
+            COMMAND="python ${algorithm}_run.py"
+        fi
+
         echo -n "Running ${language}/${algorithm}..."
-        TIME_TAKEN=$(time_taken $language ${PROGRAMS_DIR}/${language}/${algorithm}/${algorithm}_run.${EXTENSION})
+        TIME_TAKEN=$(time_taken ${COMMAND})
         echo $TIME_TAKEN
 
         cd ..
@@ -159,3 +167,4 @@ for language in "${LANGUAGES[@]}"; do
     done
 done
 cd $PROGRAMS_DIR
+cat $BENCHMARKS_FILE | column -t -s "|" | tee $BENCHMARKS_FILE > /dev/null
