@@ -106,7 +106,7 @@ def test_is_prime_returns_false_for_non_prime_numbers():
 def test_sieve_returns_the_correct_number_of_prime_numbers_given_n():
     # Known number of prime numbers given the dictionary key as an upper bound.
     # limits = { 1: 0, 10 : 4, 100 : 25, 1000 : 168, 10000 : 1229, 100000 : 9592, 1000000 : 78498, 10000000 : 664579, 100000000 : 5761455 }
-    limits = {1: 0, 10: 4, 100: 25, 1000: 168, 10000: 1229}
+    limits = {0: 0, 1: 0, 2: 1, 10: 4, 100: 25, 1000: 168, 10000: 1229}
     for limit in limits:
         assert len(sieve(limit)) == limits[limit]
 
@@ -114,7 +114,9 @@ def test_sieve_returns_the_correct_number_of_prime_numbers_given_n():
 def test_sieve_returns_the_correct_list_of_prime_numbers_given_n():
     # Known list of prime numbers given the dictionary key as an upper bound.
     limits = {
+        0: [],
         1: [],
+        2: [2],
         10: [2, 3, 5, 7],
         100: [
             2,

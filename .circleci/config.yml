@@ -30,6 +30,21 @@ jobs:
             # Test
             - run: echo "Testing ..."
             - run: pytest --cov . --cov-branch . --cov-report term-missing --cov-fail-under 100
+    go_build_format_test:
+        docker:
+            - image: cimg/go:1.17.5
+        # Checkout the code as the first step. This is a dedicated CircleCI step.
+        steps:
+            - checkout
+            # Format
+            - run: echo "Checking formatting ..."
+            - run: gofmt -l .
+            # Build
+            - run: echo "Building ..."
+            - run: go run implementations/go/sieve/sieve_run.go implementations/go/sieve/sieve.go
+            # Test
+            - run: echo "Testing ..."
+            - run: go test -cover implementations/go/**/*.go
     rust_build_format_test:
         docker:
             - image: cimg/rust:1.57.0
@@ -52,4 +67,5 @@ workflows:
     build_and_test:
         jobs:
             - python_build_format_test
+            - go_build_format_test
             - rust_build_format_test

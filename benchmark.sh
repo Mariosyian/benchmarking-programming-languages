@@ -62,7 +62,7 @@ BENCHMARKS_FILE="${BENCHMARKS_DIR}/benchmarks"
 DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
 SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
 
-LANGUAGES=(python rust)
+LANGUAGES=(python rust go)
 ALGORITHMS=(sieve)
 
 INTERVAL=1
@@ -96,7 +96,7 @@ function time_taken() {
     TEMP_FILE="tmp_bench"
     
     # Get the command output and cut the top line (header line)
-    { python $SYRUPY -S -C --no-raw-process-log $1 $2 2> /dev/null; } | sed 1d > $TEMP_FILE
+    { python $SYRUPY -S -C --no-raw-process-log "$@" 2> /dev/null; } | sed 1d > $TEMP_FILE
 
     ELAPSED_TIME=$(tail $TEMP_FILE -n 1 | awk '{print $4}')
 
@@ -156,21 +156,23 @@ for language in "${LANGUAGES[@]}"; do
             # Run tests
             # rustc --test "${algorithm}_test.rs" -o "${algorithm}_test"
             # ./${algorithm}_test
+        elif [ $language == "go" ]
+        then
+            # Run algorithm
+            COMMAND="go run ."
+            # Run tests
+            # TODO
         elif [ $language == "python" ]
         then
             COMMAND="python ${algorithm}_run.py"
         fi
 
         echo -ne "[${language}/${algorithm}]\t..."
-        if [[ $COMMAND == *" "* ]]; then
-            TIME_TAKEN=$(time_taken $language $COMMAND)
-        else
-            TIME_TAKEN=$(time_taken $COMMAND)
-        fi
+        TIME_TAKEN=$(time_taken ${COMMAND})
         echo $TIME_TAKEN
         cd ..
         sleep $INTERVAL
     done
 done
-cd $CURRENT_DIR
-cat $BENCHMARKS_FILE | column -t -s '|' | tee $BENCHMARKS_FILE
+cd $PROGRAMS_DIR
+cat $BENCHMARKS_FILE | column -t -s "|" | tee $BENCHMARKS_FILE > /dev/null
