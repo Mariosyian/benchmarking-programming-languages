@@ -96,7 +96,7 @@ function time_taken() {
     TEMP_FILE="tmp_bench"
     
     # Get the command output and cut the top line (header line)
-    { python $SYRUPY -S -C --no-raw-process-log $1 $2 2> /dev/null; } | sed 1d > $TEMP_FILE
+    { python $SYRUPY -S -C --no-raw-process-log "$@" 2> /dev/null; } | sed 1d > $TEMP_FILE
 
     ELAPSED_TIME=$(tail $TEMP_FILE -n 1 | awk '{print $4}')
 
@@ -159,7 +159,7 @@ for language in "${LANGUAGES[@]}"; do
         fi
 
         echo -n "Running ${language}/${algorithm}..."
-        TIME_TAKEN=$(time_taken ${language} ${COMMAND})
+        TIME_TAKEN=$(time_taken ${COMMAND})
         echo $TIME_TAKEN
 
         cd ..
@@ -167,3 +167,4 @@ for language in "${LANGUAGES[@]}"; do
     done
 done
 cd $PROGRAMS_DIR
+cat $BENCHMARKS_FILE | column -t -s "|" | tee $BENCHMARKS_FILE > /dev/null
