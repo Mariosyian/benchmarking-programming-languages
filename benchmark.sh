@@ -64,7 +64,7 @@ SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
 JUNIT="${DEPENDENCIES_DIR}/junit/junit-4.10.jar"
 HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
 
-LANGUAGES=(python java)
+LANGUAGES=(python rust go java)
 ALGORITHMS=(sieve)
 
 INTERVAL=1
@@ -80,12 +80,11 @@ function float_to_int() {
     printf "%.0f\n" "$1"
 }
 
-# Calculates the processes elapsed time, CPU usage, and the RSS and VMS in KB
+# Calculates the processes elapsed time (s), CPU usage (%), the RSS (KB), and VMS (KB)
 # using the `syrupy` script. The function then writes the results to the benchmarks
 # file.
 #
 # Parameters:
-#   - The language being used (language command e.g. `python` for python).
 #   - The command to be run.
 # Returns:
 #   The elapsed time between the execution of the given command and the time it finished.
@@ -130,7 +129,7 @@ function time_taken() {
     fi
 
     # Print the results into the benchmark file
-    echo -e "\t${language}\t\t|\t${algorithm}\t\t|\t${ELAPSED_TIME}\t\t|\t${AVERAGE_CPU}\t\t|\t${AVERAGE_RSS}\t\t|\t${AVERAGE_VMS}" >> $BENCHMARKS_FILE
+    echo -e "${language}|${algorithm}|${ELAPSED_TIME}|${AVERAGE_CPU}|${AVERAGE_RSS}|${AVERAGE_VMS}" >> $BENCHMARKS_FILE
 
     # Cleanup
     # - Delete temporary file(s)
@@ -141,15 +140,29 @@ function time_taken() {
     echo $ELAPSED_TIME
 }
 
-# TODO: Add --test flag? to run tests before running benchmarks?
-echo -e "\tLANGUAGE\t|\tALGORITHM\t|\tELAPSED (s)\t|\tAvg. CPU (%)\t|\tAvg. RSS (KB)\t|\tAvg. VMS (KB)" > $BENCHMARKS_FILE
+echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)" > $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
     cd $PROGRAMS_DIR/$language
 
     for algorithm in "${ALGORITHMS}"; do
         cd $algorithm
 
-        if [ $language == "java" ]
+        if [ $language == "rust" ]
+        then
+            # Compile
+            rustc "${algorithm}_run.rs" -o "${algorithm}_run"
+            # Run algorithm
+            COMMAND="./${algorithm}_run"
+            # Run tests
+            # rustc --test "${algorithm}_test.rs" -o "${algorithm}_test"
+            # ./${algorithm}_test
+        elif [ $language == "go" ]
+        then
+            # Run algorithm
+            COMMAND="go run ."
+            # Run tests
+            # TODO
+        elif [ $language == "java" ]
         then
             # Compile
             javac -cp .:$JUNIT:$HAMCREST *.java
@@ -162,13 +175,13 @@ for language in "${LANGUAGES[@]}"; do
             COMMAND="python ${algorithm}_run.py"
         fi
 
-        echo -n "Running ${language}/${algorithm}..."
+        echo -ne "[${language}/${algorithm}]\t..."
         TIME_TAKEN=$(time_taken ${COMMAND})
         echo $TIME_TAKEN
-
         cd ..
         sleep $INTERVAL
     done
 done
 cd $PROGRAMS_DIR
 cat $BENCHMARKS_FILE | column -t -s "|" | tee $BENCHMARKS_FILE > /dev/null
+echo "Results written to $BENCHMARKS_FILE"
