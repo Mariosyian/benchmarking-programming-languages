@@ -45,7 +45,6 @@ You will require to be in a Linux environment for the provided script to work as
 
 # Usage
 A general purpose (and hopefully easily expandable) `benchmark.sh` bash script has been written and will continue to be developed/optimised to accommodate any new languages introduced either by myself or any community member that stumbles across this project :).
-
 ```
 # Navigate to the root of this repository
 $ ./benchmark.sh
@@ -53,4 +52,14 @@ $ ./benchmark.sh
 $ more ./benchmarks/benchmarks
 	LANGUAGE	|	ALGORITHM	|	ELAPSED (s)	|	Avg. CPU (%)	|	Avg. RSS (KB)	|	Avg. VMS (KB)
 	python		|	sieve		|	00:04		|	61		        |	7055		    |	12949
+```
+
+## Java
+In order to use the JUnit testing framework with VSCode, the following need to be added to your `settings.json`:
+```
+"java.project.referencedLibraries": [
+	"lib/**/*.jar",
+		// Absolute path to junit.jar
+		"~/git/benchmarking-programming-languages/dependencies/junit/junit-4.10.jar"
+],
 ```

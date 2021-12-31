@@ -1,3 +1,3 @@
-LANGUAGE  ALGORITHM  ELAPSED (s)  Avg. CPU (%)  Avg. RSS (KB)  Avg. VMS (KB)
-python    sieve      00:00        0             0              0
-rust      sieve      00:02        34            1180           3026
+	LANGUAGE	|	ALGORITHM	|	ELAPSED (s)	|	Avg. CPU (%)	|	Avg. RSS (KB)	|	Avg. VMS (KB)
+	python		|	sieve		|	00:04		|	76				|	6836			|	12949
+	java		|	sieve		|	00:01		|	2				|	6400			|	235290

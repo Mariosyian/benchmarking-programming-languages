@@ -61,6 +61,17 @@ jobs:
             - run: echo "Testing ..."
             - run: rustc --test ./implementations/rust/sieve/sieve_test.rs -o ./implementations/rust/sieve/sieve_test
             - run: ./implementations/rust/sieve/sieve_test
+    java_build_test:
+        docker:
+            - image: cimg/openjdk:17.0.0
+        steps:
+            - checkout
+            - run: echo "Compiling ..."
+            - run: javac -cp .:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar ./implementations/java/sieve/*.java
+            - run: echo "Running ..."
+            - run: java -cp ./implementations/java/sieve/:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar sieve_run
+            - run: echo "Testing ..."
+            - run: java -cp ./implementations/java/sieve/:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar sieve_test
 
 # Invoke jobs via workflows
 workflows:
@@ -69,3 +80,4 @@ workflows:
             - python_build_format_test
             - go_build_format_test
             - rust_build_format_test
+            - java_build_test
