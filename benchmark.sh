@@ -64,7 +64,7 @@ SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
 JUNIT="${DEPENDENCIES_DIR}/junit/junit-4.10.jar"
 HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
 
-LANGUAGES=(rust go java python)
+LANGUAGES=(rust go java c python)
 ALGORITHMS=(sieve)
 
 INTERVAL=1
@@ -170,6 +170,15 @@ for language in "${LANGUAGES[@]}"; do
             COMMAND="java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_run"
             # Run tests
             # java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_test
+        elif [ $language == "c" ]
+        then
+            # Compile
+            gcc -Wall -c "${algorithm}.c" "${algorithm}_run.c"
+            gcc -o "${algorithm}_run" "${algorithm}.o" "${algorithm}_run.o"
+            # Run algorithm
+            COMMAND="./${algorithm}_run"
+            # Run tests
+            # TODO: Write tests
         elif [ $language == "python" ]
         then
             COMMAND="python ${algorithm}_run.py"
