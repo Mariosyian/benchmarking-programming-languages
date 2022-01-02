@@ -2,7 +2,7 @@
 #define SIEVE_DOT_H
 
 int isPrime(int number);
-int elementExists(int element, int* array);
+int elementExists(int element, int size, int* array);
 int* extendArray(int* array);
 int* run(int upperBound);
 

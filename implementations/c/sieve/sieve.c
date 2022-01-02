@@ -25,10 +25,10 @@ int isPrime(int number) {
 	return TRUE;
 }
 
-int elementExists(int element, int* array) {
-    int index = 0;
-    for (index = 0; index < arraySize; index ++) {
-        if (array[index] == element) {
+int elementExists(int element, int size, int* array) {
+    int i = 0;
+    for (; i < size; i ++) {
+        if (array[i] == element) {
             return TRUE;
         }
     }
@@ -75,7 +75,7 @@ int* run(int upperBound) {
         }
         for (j = 0; j < i; j ++) {
             int currentNum = i * j;
-            if (currentNum > upperBound || elementExists(currentNum, primes)) {
+            if (currentNum > upperBound || elementExists(currentNum, index, primes) == TRUE) {
                 continue;
             }
 

@@ -63,6 +63,7 @@ DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
 SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
 JUNIT="${DEPENDENCIES_DIR}/junit/junit-4.10.jar"
 HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
+UNITY="${DEPENDENCIES_DIR}/unity/unity.c"
 
 LANGUAGES=(rust go java c python)
 ALGORITHMS=(sieve)
@@ -178,7 +179,9 @@ for language in "${LANGUAGES[@]}"; do
             # Run algorithm
             COMMAND="./${algorithm}_run"
             # Run tests
-            # TODO: Write tests
+            # gcc -Wall -c "${algorithm}.c" "${algorithm}_test.c" $UNITY
+            # gcc -o "${algorithm}_test" "${algorithm}.o" "${algorithm}_test.o" "unity.o"
+            # ./${algorithm}_test
         elif [ $language == "python" ]
         then
             COMMAND="python ${algorithm}_run.py"
