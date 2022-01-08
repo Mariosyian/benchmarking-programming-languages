@@ -8,14 +8,12 @@
 #define FALSE 0
 #define TRUE 1
 
-int static arraySize = 1;
-
 int isPrime(int number) {
 	if (number < 2) {
 		return FALSE;
 	}
 
-    int i = 2;
+    int i;
 	for (i = 2; i < number; i ++) {
 		if (number%i == 0) {
 			return FALSE;
@@ -28,7 +26,7 @@ int isPrime(int number) {
 int elementExists(int element, int size, int* array) {
     int i = 0;
     for (; i < size; i ++) {
-        if (array[i] == element) {
+        if (*(array + i) == element) {
             return TRUE;
         }
     }
@@ -36,23 +34,27 @@ int elementExists(int element, int size, int* array) {
     return FALSE;
 }
 
-int* extendArray(int* array) {
-    int *newArray = malloc(arraySize * ARRAY_SIZE_MULTIPLIER * sizeof(int));
+int* extendArray(int* array, int currentSize) {
+    int newSize = currentSize * ARRAY_SIZE_MULTIPLIER;
+    int *newArray = malloc(newSize * sizeof(int));
     if (newArray == NULL) {
         printf("Memory allocation to (newArray) failed.");
         exit(1);
     }
 
-    int index = 0;
-    for (index = 0; index < arraySize; index ++) {
-        newArray[index] = array[index];
+    int index;
+    for (index = 0; index < currentSize; index ++) {
+        *(newArray + index) = *(array + index);
+    }
+    for (index = currentSize; index < newSize; index ++) {
+        *(newArray + index) = 0;
     }
 
-    arraySize = arraySize * ARRAY_SIZE_MULTIPLIER;
     return newArray;
 }
 
 int* run(int upperBound) {
+    int arraySize = 1;
     int *primes = malloc(arraySize * sizeof(int));
     if (primes == NULL) {
         printf("Memory allocation to (primes) failed.");
@@ -60,9 +62,10 @@ int* run(int upperBound) {
     }
 
     if (upperBound == 0 || upperBound == 1) {
+        *(primes + 0) = 0;
         return primes;
     } else if (upperBound == 2) {
-        primes[0] = 2;
+        *(primes + 0) = 2;
         return primes;
     }
 
@@ -71,18 +74,29 @@ int* run(int upperBound) {
     int j = 0;
     for (i = 2; i < upperBound; i ++) {
         if (index >= arraySize) {
-            extendArray(primes);
+            extendArray(primes, arraySize);
+            arraySize = arraySize * ARRAY_SIZE_MULTIPLIER;
         }
         for (j = 0; j < i; j ++) {
             int currentNum = i * j;
-            if (currentNum > upperBound || elementExists(currentNum, index, primes) == TRUE) {
+            if (currentNum > upperBound) {
+                continue;
+            }
+            if (elementExists(currentNum, arraySize, primes) == TRUE) {
                 continue;
             }
 
             if (isPrime(currentNum)) {
-                primes[index] = currentNum;
+                *(primes + index) = currentNum;
                 index ++;
             }
+        }
+    }
+
+    // Fill rest of data structure with zeros
+    if (index < arraySize) {
+        for (; index < arraySize; index ++) {
+            *(primes + index) = 0;
         }
     }
 

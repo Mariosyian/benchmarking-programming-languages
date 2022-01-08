@@ -147,9 +147,8 @@ void test_sieve_returns_the_correct_number_of_prime_numbers_given_n(void) {
     for (; i < 7; i ++) {
         int* result = run(limits[i][0]);
         int numOfElements = 0;
-        while (*result != 0) {
+        while (*(result + numOfElements) != 0) {
             numOfElements ++;
-            *result ++;
         }
         TEST_ASSERT_EQUAL_INT64(limits[i][1], numOfElements);
     }
@@ -157,9 +156,10 @@ void test_sieve_returns_the_correct_number_of_prime_numbers_given_n(void) {
 
 void test_sieve_returns_the_correct_list_of_prime_numbers_given_n(void) {
     int limits[5] = {0, 1, 2, 10, 100};
+    // C doesn't like empty arrays apparently ...
     int values[5][25] = {
-        {},
-        {},
+        {0},
+        {0},
         {2},
         {2, 3, 5, 7},
         {
@@ -190,7 +190,7 @@ void test_sieve_returns_the_correct_list_of_prime_numbers_given_n(void) {
             97,
         }
     };
-    int numOfElements[5] = {0, 0, 1, 4, 25};
+    int numOfElements[5] = {1, 1, 1, 4, 25};
 
     int i = 0;
     for (; i < 5; i ++) {
