@@ -66,12 +66,30 @@ jobs:
             - image: cimg/openjdk:17.0.0
         steps:
             - checkout
+            # No format check yet as requires NPM install
             - run: echo "Compiling ..."
             - run: javac -cp .:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar ./implementations/java/sieve/*.java
             - run: echo "Running ..."
             - run: java -cp ./implementations/java/sieve/:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar sieve_run
             - run: echo "Testing ..."
             - run: java -cp ./implementations/java/sieve/:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar sieve_test
+    c_build_test:
+        docker:
+            - image: cimg/base:2021.12
+        steps:
+            - checkout
+            # No format check as C default formatting is inconsistent with the rest and I don't like it.
+            - run: echo "Compiling ..."
+            - run: gcc -Wall -c ./implementations/c/sieve/sieve.c ./implementations/c/sieve/sieve_run.c
+            - run: gcc -o ./implementations/c/sieve/sieve_run sieve.o sieve_run.o
+            - run: echo "Running ..."
+            - run: ./implementations/c/sieve/sieve_run
+            - run: echo "Testing ..."
+            - run: gcc -Wall -c ./implementations/c/sieve/sieve.c ./implementations/c/sieve/sieve_test.c ./dependencies/unity/unity.c
+            - run: gcc -o sieve_test sieve.o sieve_test.o unity.o
+            - run: ./sieve_test
+            - run: echo "Cleaning up..."
+            - run: rm sieve.o sieve_run.o sieve_test.o unity.o
 
 # Invoke jobs via workflows
 workflows:
@@ -81,3 +99,4 @@ workflows:
             - go_build_format_test
             - rust_build_format_test
             - java_build_test
+            - c_build_test
