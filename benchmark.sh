@@ -141,6 +141,9 @@ function time_taken() {
     echo $ELAPSED_TIME
 }
 
+# TODO: Add --clean flag to cleanup compiled files
+# FILES_TO_CLEANUP = ()
+# TODO: Add --test flag to run tests before executing
 echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)" > $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
     cd $PROGRAMS_DIR/$language
