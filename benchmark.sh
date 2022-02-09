@@ -81,6 +81,63 @@ function float_to_int() {
     printf "%.0f\n" "$1"
 }
 
+# Retrieves the CPU brand and model name of the host machine from the `/proc/cpuinfo`
+# file.
+#
+# Parameters:
+#   N/A
+# Returns:
+#   The brand and model of the current machine.
+function get_cpu_name() {
+    CPU_MODEL=$(cat /proc/cpuinfo | grep 'model name' | head -n 1 | awk '{for (i=4;i<=NF;i++) printf "%s ", $i}')
+    CPU_BRAND=$(echo $CPU_MODEL | awk '{print $1}')
+
+    if [ $CPU_BRAND == "AMD" ]
+    then
+        echo $CPU_MODEL | awk '{printf "%s %s %s %s\n", $1, $2, $3, $4}'
+    elif [ $CPU_BRAND == "Intel(R)" ]
+    then
+        echo $CPU_MODEL | awk '{printf "%s %s %s %s %s\n", $1, $2, $3, $4, $5}'
+    else
+        echo $CPU_MODEL
+    fi
+}
+
+# Retrieves the number of logical processors of the host machine from the
+# `/proc/cpuinfo` file.
+#
+# Parameters:
+#   N/A
+# Returns:
+#   The number of logical processors (threads) of the host machine.
+function get_num_of_processors() {
+    NUM_OF_CORES=$(cat /proc/cpuinfo | grep 'processor' | tail -n 1 | awk '{print $3}')
+    echo $(($NUM_OF_CORES + 1))
+}
+
+# Retrieves the number of physical processors of the host machine from the
+# `/proc/cpuinfo` file.
+#
+# Parameters:
+#   N/A
+# Returns:
+#   The number of physical processors (cores) of the host machine.
+function get_num_of_cores() {
+    echo $(cat /proc/cpuinfo  | grep 'core id' | uniq.exe | wc -l)
+}
+
+# Retrieves the total amount of RAM of the host machine from the
+# `/proc/meminfo` file.
+#
+# Parameters:
+#   N/A
+# Returns:
+#   The amount of primary memory of the host machine in GBs.
+function get_ram_in_gb() {
+    MEMORY_IN_kB=$(cat /proc/meminfo | grep 'MemTotal' | awk '{print $2}')
+    echo $(($MEMORY_IN_kB / 1024 / 1024))
+}
+
 # Calculates the processes elapsed time (s), CPU usage (%), the RSS (KB), and VMS (KB)
 # using the `syrupy` script. The function then writes the results to the benchmarks
 # file.
@@ -144,7 +201,12 @@ function time_taken() {
 # TODO: Add --clean flag to cleanup compiled files
 # FILES_TO_CLEANUP = ()
 # TODO: Add --test flag to run tests before executing
-echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)" > $BENCHMARKS_FILE
+echo "" > $BENCHMARKS_FILE
+# Host machine information
+echo -e "CPU: \t\t$(get_cpu_name)" >> $BENCHMARKS_FILE
+echo -e "Processors: \t$(get_num_of_cores) Cores / $(get_num_of_processors) Threads" >> $BENCHMARKS_FILE
+echo -e "Memory: \t$(get_ram_in_gb) GB" >> $BENCHMARKS_FILE
+echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)" >> $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
     cd $PROGRAMS_DIR/$language
 
