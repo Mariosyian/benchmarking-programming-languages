@@ -1,0 +1,42 @@
+version: "3"
+
+services:
+  # Includes GCC and Python3
+  pre-requisites:
+    build:
+      context: .
+      dockerfile: "./docker/dockerfiles/pre-requisites/Dockerfile"
+    networks:
+      - main
+    volumes:
+      - home:/home/benchmarking-programming-languages
+  java:
+    image: "openjdk:17-alpine"
+    depends_on:
+      - pre-requisites
+    networks:
+      - main
+    volumes:
+      - home:/home/benchmarking-programming-languages
+  go:
+    image: "golang:1.17-alpine"
+    depends_on:
+      - pre-requisites
+    networks:
+      - main
+    volumes:
+      - home:/home/benchmarking-programming-languages
+  rust:
+    image: "rust:1.58-alpine"
+    depends_on:
+      - pre-requisites
+    networks:
+      - main
+    volumes:
+      - home:/home/benchmarking-programming-languages
+
+volumes:
+  home:
+
+networks:
+  main:
