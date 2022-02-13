@@ -213,7 +213,6 @@ class MarkdownParser:
                 self.raw_html += f"<b>{content}</b>"
             elif special_chars_length == 3:
                 self.raw_html += f"<b><i>{content}</i></b>"
-
         elif special_chars[0] == "_":
             if special_chars_length > 1 or len(matched_regex) == 0:
                 self.append_invalid_regex(line)
