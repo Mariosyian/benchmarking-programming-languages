@@ -123,6 +123,10 @@ class MarkdownParser:
         special_chars = regex.string[span_start:span_end]
         special_chars_length = len(special_chars)
 
+        if line[:span_start].strip() != "":
+            self.raw_html += f"<p>\n{line[:span_start]}"
+            self.html_elements.append("p")
+
         if (
             special_chars[0] == "#"
             and line.strip()[0] == "#"
@@ -150,10 +154,8 @@ class MarkdownParser:
                 self.append_invalid_regex(line)
                 return
 
-            content_length = regex.span()[0] - span_start
-            content = line[special_chars_length:content_length].strip()
-
             # Don't add a new line at the end as these could be inline.
+            content = line[span_end : regex.span()[0]].strip()
             if special_chars_length == 1:
                 self.raw_html += f"<i>{content}</i>"
             elif special_chars_length == 2:
@@ -171,9 +173,7 @@ class MarkdownParser:
                     self.append_invalid_regex(line)
                     return
 
-            content_length = regex.span()[0] - span_start
-            content = line[special_chars_length:content_length].strip()
-
+            content = line[span_end : regex.span()[0]].strip()
             self.raw_html += f'<p style="text-decoration: underline;">{content}</p>'
 
         elif special_chars[0] == "!":
@@ -183,7 +183,6 @@ class MarkdownParser:
                 alt_text = alt_text[2:]
                 src = src[:-1]
                 self.raw_html += f'<img src="{src}" alt="{alt_text}"/>'
-                self.html_elements.append("p")
 
                 line = line[regex[0].span()[1] :]
                 # Since URLs have some of the special characters that the markdown
@@ -201,8 +200,7 @@ class MarkdownParser:
                 text, src = regex[0].group().split("](")
                 text = text[1:]
                 src = src[:-1]
-                self.raw_html += f'<p>\n{line[:span_start]}<a href="{src}">{text}</a>'
-                self.html_elements.append("p")
+                self.raw_html += f'<a href="{src}">{text}</a>'
 
                 line = line[regex[0].span()[1] :]
                 # Since URLs have some of the special characters that the markdown
@@ -221,8 +219,14 @@ class MarkdownParser:
         # e.g. # An h1 header with **bold text**
         if len(matched_regex):
             next_regex_start, _ = matched_regex[0].span()
-            self.raw_html += line[span_end:next_regex_start]
-            self.parse_special_characters(line[next_regex_start:], matched_regex)
+            # Use `regex.span()[1]` instead of `span_end` as `regex` could have been
+            # updated in the case of an emphasis styling pattern. This does not update
+            # `span_start` or `span_end`.
+            self.raw_html += line[regex.span()[1] : next_regex_start]
+            self.parse_special_characters(
+                line[next_regex_start:],
+                self.get_special_characters(line[next_regex_start:]),
+            )
             matched_regex = []
         elif regex:
             self.raw_html += line[regex.span()[1] :]
