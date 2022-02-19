@@ -18,11 +18,10 @@ class MarkdownParser:
     html_elements = None
     # The string to contain all the parsed HTML.
     raw_html = None
-    # A list to indicate what type of list is at each level.
-    # e.g. ['ul', 'ol', ...] indicates:
-    # 1st level is an unordered list
-    # 2nd level is an ordered list
-    list_type = []
+    # Boolean flag to denote if this is the start of a blockquote.
+    blockquote_item = False
+    # Boolean flag to denote if this is the start of an unordered list.
+    list_item = False
 
     def __init__(self, content: str = None, string: bool = False):
         """
@@ -41,6 +40,8 @@ class MarkdownParser:
             if not path.exists(content):
                 raise FileNotFoundError("The file provided was not found.")
 
+        self.blockquote_item = False
+        self.list_item = False
         self.html_elements = []
         self.raw_html = f'<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="author" content="Marios Yiannakou">\n<meta name="description" content="This is a markdown parser to HTML created for my COMP30040 module at the University of Manchester.">\n</head>\n<body>\n'
         self._read_file(content, string)
@@ -85,12 +86,23 @@ class MarkdownParser:
         # TODO: regex *[a-zA-Z0-9]*\n, remove only last \n
         #       Splitting on "\n" might have unwanted consequences
         for line in content.split("\n"):
-            if line.strip() == "":
+            line = line.strip()
+            if line == "":
+                if self.list_item:
+                    self.list_item = False
+                if self.blockquote_item:
+                    self.blockquote_item = False
                 self.previous_line = ""
                 continue
 
             if self.previous_line == "" and self.html_elements:
                 self.raw_html += f"\n</{self.html_elements.pop()}>\n"
+
+            if self.list_item and line[0] != "-":
+                self.list_item = False
+
+            if self.blockquote_item and line[0] != ">":
+                self.blockquote_item = False
 
             special_characters = self.get_special_characters(line)
             if not special_characters:
@@ -212,6 +224,15 @@ class MarkdownParser:
             else:
                 self.append_invalid_regex(line)
 
+        elif special_chars[0] == ">" and len(line) > 1 and line[1:].strip() != "":
+            if not self.blockquote_item:
+                self.blockquote_item = True
+                self.raw_html += f"<blockquote>\n"
+                self.html_elements.append("blockquote")
+
+            self.raw_html += f"<p>"
+            closing_tag = "</p>\n"
+
         else:
             self.append_invalid_regex(line)
 
@@ -321,6 +342,22 @@ _This line should not be underlined and keep the underscore
 __This line should not be underlined neither, and keep both the underscores__
 
 This line should contain a hyperlink to [Google.com](https://www.google.com).
+
+> This is a blockquote
+
+> This is the first item in a multiline blockquote.
+> **This is the second item in a blockquote and it's bold**.
+> *This is the third item in a blockquote and it's italic*.
+> ***This is the third item in a blockquote and it's both***.
+> This is the third item in a blockquote and it's part plain, **part bold**, and *part italic*.
+
+- This is a single item unordered list.
+
+- This is the first item in an unordered list.
+- This is the second item in an unordered list.
+- **This is the third item in an unordered list and it's bold**.
+- This is the fourth item in an unordered list and part of it is plain, **part bold**, *part italic*, and ***part both***.
+- This is the fifth item in an unordered list and links to my [GitHub page](https://www.github.com/Mariosyian).
 
 This line should have an **image** of a muffin ![muffin time](https://static.wikia.nocookie.net/asdfmovie/images/1/1d/Muffin.png/revision/latest/scale-to-width-down/148?cb=20180617145555) with alternate text 'muffin time'.""",
     True,
