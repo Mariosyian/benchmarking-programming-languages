@@ -1,6 +1,9 @@
-from os import path, remove
 import re
+import sys
+from os import path, remove
 from typing import Union
+
+from bs4 import BeautifulSoup
 
 
 class MarkdownParser:
@@ -23,7 +26,13 @@ class MarkdownParser:
     # Boolean flag to denote if this is the start of an unordered list.
     list_item = False
 
-    def __init__(self, content: str = None, string: bool = False):
+    def __init__(
+        self,
+        content: str = None,
+        string: bool = False,
+        prettify: bool = False,
+        stdout: bool = False,
+    ):
         """
         Parse a markdown document or string into its HTML equivalent.
 
@@ -44,9 +53,11 @@ class MarkdownParser:
         self.list_item = False
         self.html_elements = []
         self.raw_html = f'<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="author" content="Marios Yiannakou">\n<meta name="description" content="This is a markdown parser to HTML created for my COMP30040 module at the University of Manchester.">\n</head>\n<body>\n'
-        self._read_file(content, string)
+        self._read_file(content, string, prettify, stdout)
 
-    def _read_file(self, filename: str, string: bool) -> None:
+    def _read_file(
+        self, filename: str, string: bool, prettify: bool = False, stdout: bool = False
+    ) -> None:
         """
         Open the given file in read mode and parse each line.
 
@@ -55,6 +66,11 @@ class MarkdownParser:
         :param string: Boolean flag to specify whether a user has passed a string to be
             parsed, or a filename.
         """
+        if not filename and not string:
+            print(
+                "Please provide either a path to a file with markdown, "
+                "or a string of markdown to be parsed."
+            )
         if not string:
             with open(filename, "r") as file:
                 for line in file.readlines():
@@ -63,18 +79,23 @@ class MarkdownParser:
             self.parse_content(filename)
 
         self.raw_html += f"\n</body>\n</html>\n"
+        parsed_content_filename = "parsed.html"
+        try:
+            if prettify:
+                self.raw_html = BeautifulSoup(self.raw_html, "html.parser").prettify()
 
-        print(self.raw_html)
-        # parsed_content_filename = "parsed.html"
-        # try:
-        #     with open(parsed_content_filename, "w") as file:
-        #         file.write(self.raw_html)
-        # except Exception as e:
-        #     print(f"Exception occured while writing to file ... printing to standard out")
-        #     print(self.raw_html)
-        #     if path.exists(parsed_content_filename):
-        #          remove(parsed_content_filename)
-        # TODO: Format with prettier?
+            if stdout:
+                print(self.raw_html)
+            else:
+                with open(parsed_content_filename, "w") as file:
+                    file.write(self.raw_html)
+        except Exception as e:
+            print(
+                f"Exception {str(e)} occured while writing to file ... printing to standard out"
+            )
+            print(self.raw_html)
+            if path.exists(parsed_content_filename):
+                remove(parsed_content_filename)
 
     def parse_content(self, content: str) -> None:
         """
@@ -189,7 +210,7 @@ class MarkdownParser:
             self.raw_html += f'<p style="text-decoration: underline;">{content}</p>'
 
         elif special_chars[0] == "!":
-            regex = [match for match in re.finditer(r"\!\[.*?\]\(.*?\)", line)]
+            regex = [match for match in re.finditer(r"\!\[.*?\]\(.*?\)", line) if match.group()]
             if regex:
                 alt_text, src = regex[0].group().split("](")
                 alt_text = alt_text[2:]
@@ -207,7 +228,7 @@ class MarkdownParser:
                 self.append_invalid_regex(line)
 
         elif special_chars[0] == "[":
-            regex = [match for match in re.finditer(r"\[.*?\]\(.*?\)", line)]
+            regex = [match for match in re.finditer(r"\[.*?\]\(.*?\)", line) if match.group()]
             if regex:
                 text, src = regex[0].group().split("](")
                 text = text[1:]
@@ -259,7 +280,7 @@ class MarkdownParser:
         # e.g. # This line is an h1 header with ***bold and italic text*** and more normal text
         #      </i></b> closes before the end of the line so `closing_tag` is `None`.
         if closing_tag:
-            self.raw_html += closing_tag
+            self.raw_html += f"{closing_tag}"
 
     def validate_regex(
         self, current_regex: re.Match, popped_regex: re.Match
@@ -313,12 +334,13 @@ class MarkdownParser:
         :returns: A list of `re.Match` elements representing all the matched special
             charaters found in `string`.
         """
-        pattern = r"[^a-zA-Z0-9 '\"./:?]*"
+        pattern = r"[^a-zA-Z0-9 '\"./\\@$&=+;:<,?{}|~]*"
         return [match for match in re.finditer(pattern, string) if match.group()]
 
 
-parser = MarkdownParser(
-    """This is a multiline input
+if __name__ == "__main__":
+    parser = MarkdownParser(
+        """This is a multiline input
 to be parsed in the markdown parser
 
 # *This line should be an h1 header with italic text*
@@ -360,5 +382,7 @@ This line should contain a hyperlink to [Google.com](https://www.google.com).
 - This is the fifth item in an unordered list and links to my [GitHub page](https://www.github.com/Mariosyian).
 
 This line should have an **image** of a muffin ![muffin time](https://static.wikia.nocookie.net/asdfmovie/images/1/1d/Muffin.png/revision/latest/scale-to-width-down/148?cb=20180617145555) with alternate text 'muffin time'.""",
-    True,
-)
+        True,
+        "--prettify" in sys.argv,
+        "--stdout" in sys.argv,
+    )
