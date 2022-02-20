@@ -42,14 +42,24 @@ class MarkdownParser:
             conjunction with the `string` boolean flag.
         :param string: Boolean flag to specify whether a user has passed a filename
             or a string.
+        :param prettify: Boolean flag to specify whether the HTML output should be
+            formatted using BeautifulSoup.
+        :param stdout: Boolean flag to specify whether the HTML output should be
+            displayed to standard out instead of being written to a file.
         :raises: A `ValueError` if no filename and no content has been provided to parse.
         :raises: A `FileNotFoundError` if the filename provided does not exist.
         """
-        if not content:
-            raise ValueError("No file or content have been provided.")
+        if content is None and not string:
+            print("No file was provided.")
+            sys.exit(1)
+        elif content is None and string:
+            print("No markdown string was provided.")
+            sys.exit(1)
+
         if not string:
             if not path.exists(content):
-                raise FileNotFoundError("The file provided was not found.")
+                print("The file provided was not found.")
+                sys.exit(1)
 
         self.blockquote_item = False
         self.unordered_list_item = False
@@ -64,16 +74,15 @@ class MarkdownParser:
         """
         Open the given file in read mode and parse each line.
 
-        :param content: The path of the file, or a string, to be parsed. Works in
+        :param filename: The path of the file, or a string, to be parsed. Works in
             conjunction with the `string` boolean flag.
         :param string: Boolean flag to specify whether a user has passed a string to be
             parsed, or a filename.
+        :param prettify: Boolean flag to specify whether the HTML output should be
+            formatted using BeautifulSoup.
+        :param stdout: Boolean flag to specify whether the HTML output should be
+            displayed to standard out instead of being written to a file.
         """
-        if not filename and not string:
-            print(
-                "Please provide either a path to a file with markdown, "
-                "or a string of markdown to be parsed."
-            )
         if not string:
             with open(filename, "r") as file:
                 for line in file.readlines():
@@ -109,6 +118,7 @@ class MarkdownParser:
         """
         # TODO: regex *[a-zA-Z0-9]*\n, remove only last \n
         #       Splitting on "\n" might have unwanted consequences
+        # Edit 20/02/2022 no consequences have been found so will leave as is.
         for line in content.split("\n"):
             line = line.strip()
             if line == "":
@@ -119,8 +129,6 @@ class MarkdownParser:
                 if self.blockquote_item:
                     self.blockquote_item = False
                 self.previous_line = ""
-                continue
-            elif line[0] == "%":
                 continue
 
             if self.previous_line == "" and self.html_elements:
@@ -220,7 +228,11 @@ class MarkdownParser:
             self.raw_html += f'<p style="text-decoration: underline;">{content}</p>'
 
         elif special_chars[0] == "!":
-            regex = [match for match in re.finditer(r"\!\[.*?\]\(.*?\)", line) if match.group()]
+            regex = [
+                match
+                for match in re.finditer(r"\!\[.*?\]\(.*?\)", line)
+                if match.group()
+            ]
             if regex:
                 alt_text, src = regex[0].group().split("](")
                 alt_text = alt_text[2:]
@@ -238,7 +250,9 @@ class MarkdownParser:
                 self.append_invalid_regex(line)
 
         elif special_chars[0] == "[":
-            regex = [match for match in re.finditer(r"\[.*?\]\(.*?\)", line) if match.group()]
+            regex = [
+                match for match in re.finditer(r"\[.*?\]\(.*?\)", line) if match.group()
+            ]
             if regex:
                 text, src = regex[0].group().split("](")
                 text = text[1:]
@@ -362,13 +376,11 @@ class MarkdownParser:
         :returns: A list of `re.Match` elements representing all the matched special
             charaters found in `string`.
         """
-        pattern = r"[^a-zA-Z0-9 '\"./\\@$&=;:<,?{}|~]*"
+        pattern = r"[^a-zA-Z0-9 '\"./\\@$%&=;:<,?{}|~]*"
         return [match for match in re.finditer(pattern, string) if match.group()]
 
 
-if __name__ == "__main__":
-    parser = MarkdownParser(
-        """This is a multiline input
+content = """This is a multiline input
 to be parsed in the markdown parser
 
 # *This line should be an h1 header with italic text*
@@ -417,8 +429,71 @@ This line should contain a hyperlink to [Google.com](https://www.google.com).
 + This is the fourth item in an ordered list and part of it is plain, **part bold**, *part italic*, and ***part both***.
 + This is the fifth item in an ordered list and links to my [GitHub page](https://www.github.com/Mariosyian).
 
-This line should have an **image** of a muffin ![muffin time](https://static.wikia.nocookie.net/asdfmovie/images/1/1d/Muffin.png/revision/latest/scale-to-width-down/148?cb=20180617145555) with alternate text 'muffin time'.""",
-        True,
-        "--prettify" in sys.argv,
-        "--stdout" in sys.argv,
+This line should have an **image** of a muffin ![muffin time](https://static.wikia.nocookie.net/asdfmovie/images/1/1d/Muffin.png/revision/latest/scale-to-width-down/148?cb=20180617145555) with alternate text 'muffin time'."""
+
+
+def show_help_message():
+    """Display a help message and exit the program."""
+    print(
+        """
+Shaved down version of the Common Mark markdown parser created as part of COMP30040.
+This version was written for Python3.
+
+usage: python markdown_parser.py <path/to/file> [--help] [--raw <markdown string>]
+                                                [--prettify] [--stdout] [--demo]
+
+<path/to/file>: The file that contains markdown code. Ignored if the `--raw` flag is
+                used. Must be the first argument.
+
+--help: Display this help message and exit.
+--raw: Provide a raw string of markdown content to be parsed into HTML.
+--prettify: Prettify the output using BeautifulSoup4.
+--stdout: Print the resulting HTML code to standard out instead of a file.
+--demo: Uses a predefined raw string (implies the `--raw` flag) that uses all features
+        of the markdown parser.
+
+Example usage:
+- Raw string
+python markdown_parser.py --raw "# An h1 header with *bold text*." --stdout
+- File
+python markdown_parser.py ./markdown.md --prettify
+
+Exit Codes:
+0 - OK
+1 - Erroneous input
+
+Author: Marios Yiannakou, GitHub: @Mariosyian"""
+    )
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    flags = {
+        "help": "--help" in sys.argv,
+        "raw": "--raw" in sys.argv,
+        "prettify": "--prettify" in sys.argv,
+        "stdout": "--stdout" in sys.argv,
+        "demo": "--demo" in sys.argv,
+    }
+
+    if flags["help"]:
+        show_help_message()
+
+    if flags["raw"]:
+        try:
+            content = sys.argv[sys.argv.index("--raw") + 1]
+        except IndexError:
+            print("No markdown string was provided.")
+            sys.exit(1)
+    elif not flags["demo"]:
+        try:
+            content = sys.argv[1]
+        except IndexError:
+            content = None
+
+    parser = MarkdownParser(
+        content,
+        flags["demo"] or flags["raw"],
+        flags["prettify"],
+        flags["stdout"],
     )
