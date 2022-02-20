@@ -24,7 +24,9 @@ class MarkdownParser:
     # Boolean flag to denote if this is the start of a blockquote.
     blockquote_item = False
     # Boolean flag to denote if this is the start of an unordered list.
-    list_item = False
+    unordered_list_item = False
+    # Boolean flag to denote if this is the start of an ordered list.
+    ordered_list_item = False
 
     def __init__(
         self,
@@ -50,7 +52,8 @@ class MarkdownParser:
                 raise FileNotFoundError("The file provided was not found.")
 
         self.blockquote_item = False
-        self.list_item = False
+        self.unordered_list_item = False
+        self.ordered_list_item = False
         self.html_elements = []
         self.raw_html = f'<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="author" content="Marios Yiannakou">\n<meta name="description" content="This is a markdown parser to HTML created for my COMP30040 module at the University of Manchester.">\n</head>\n<body>\n'
         self._read_file(content, string, prettify, stdout)
@@ -109,18 +112,25 @@ class MarkdownParser:
         for line in content.split("\n"):
             line = line.strip()
             if line == "":
-                if self.list_item:
-                    self.list_item = False
+                if self.unordered_list_item:
+                    self.unordered_list_item = False
+                if self.ordered_list_item:
+                    self.ordered_list_item = False
                 if self.blockquote_item:
                     self.blockquote_item = False
                 self.previous_line = ""
+                continue
+            elif line[0] == "%":
                 continue
 
             if self.previous_line == "" and self.html_elements:
                 self.raw_html += f"\n</{self.html_elements.pop()}>\n"
 
-            if self.list_item and line[0] != "-":
-                self.list_item = False
+            if self.unordered_list_item and line[0] != "-":
+                self.unordered_list_item = False
+
+            if self.ordered_list_item and line[0] != "+":
+                self.ordered_list_item = False
 
             if self.blockquote_item and line[0] != ">":
                 self.blockquote_item = False
@@ -162,8 +172,8 @@ class MarkdownParser:
 
         if (
             special_chars[0] == "#"
-            and line.strip()[0] == "#"
-            and line.strip()[special_chars_length:][0] == " "
+            and line[0] == "#"
+            and line[special_chars_length:][0] == " "
         ):
             tag = "<h6>" if special_chars_length >= 6 else f"<h{special_chars_length}>"
             self.raw_html += tag
@@ -254,6 +264,24 @@ class MarkdownParser:
             self.raw_html += f"<p>"
             closing_tag = "</p>\n"
 
+        elif special_chars[0] == "-" and len(line) > 1 and line[1:].strip() != "":
+            if not self.unordered_list_item:
+                self.unordered_list_item = True
+                self.raw_html += f"<ul>\n"
+                self.html_elements.append("ul")
+
+            self.raw_html += f"<li>"
+            closing_tag = "</li>\n"
+
+        elif special_chars[0] == "+" and len(line) > 1 and line[1:].strip() != "":
+            if not self.ordered_list_item:
+                self.ordered_list_item = True
+                self.raw_html += f"<ol>\n"
+                self.html_elements.append("ol")
+
+            self.raw_html += f"<li>"
+            closing_tag = "</li>\n"
+
         else:
             self.append_invalid_regex(line)
 
@@ -334,7 +362,7 @@ class MarkdownParser:
         :returns: A list of `re.Match` elements representing all the matched special
             charaters found in `string`.
         """
-        pattern = r"[^a-zA-Z0-9 '\"./\\@$&=+;:<,?{}|~]*"
+        pattern = r"[^a-zA-Z0-9 '\"./\\@$&=;:<,?{}|~]*"
         return [match for match in re.finditer(pattern, string) if match.group()]
 
 
@@ -380,6 +408,14 @@ This line should contain a hyperlink to [Google.com](https://www.google.com).
 - **This is the third item in an unordered list and it's bold**.
 - This is the fourth item in an unordered list and part of it is plain, **part bold**, *part italic*, and ***part both***.
 - This is the fifth item in an unordered list and links to my [GitHub page](https://www.github.com/Mariosyian).
+
++ This is a single item ordered list.
+
++ This is the first item in an ordered list.
++ This is the second item in an ordered list.
++ **This is the third item in an ordered list and it's bold**.
++ This is the fourth item in an ordered list and part of it is plain, **part bold**, *part italic*, and ***part both***.
++ This is the fifth item in an ordered list and links to my [GitHub page](https://www.github.com/Mariosyian).
 
 This line should have an **image** of a muffin ![muffin time](https://static.wikia.nocookie.net/asdfmovie/images/1/1d/Muffin.png/revision/latest/scale-to-width-down/148?cb=20180617145555) with alternate text 'muffin time'.""",
         True,
