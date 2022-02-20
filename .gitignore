@@ -4,3 +4,5 @@
 .python-version
 # pytest coverage report
 .coverage
+# Pycache
+__pycache__/
