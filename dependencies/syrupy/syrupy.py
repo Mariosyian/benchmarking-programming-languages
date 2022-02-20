@@ -24,16 +24,15 @@
 Profile the memory and CPU usage of a command.
 """
 
-from optparse import OptionGroup
-from optparse import OptionParser
-import subprocess
-import re
-import time
-import sys
-import os
 import datetime
-import textwrap
 import locale
+import os
+import re
+import subprocess
+import sys
+import textwrap
+import time
+from optparse import OptionGroup, OptionParser
 
 ON_POSIX = "posix" in sys.builtin_module_names
 ENCODING = locale.getdefaultlocale()[1]
