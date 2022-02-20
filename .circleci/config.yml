@@ -24,6 +24,7 @@ jobs:
             # Format
             - run: echo "Checking formatting ..."
             - run: black --check .
+            - run: isort --check .
             # Build
             - run: echo "Building ..."
             - run: python --version
