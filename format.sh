@@ -1,3 +1,4 @@
+#!/bin/bash
 echo "========== FORMAT CHECK =========="
 # Python (black)
 echo "Formatting python files using black"
@@ -8,4 +9,7 @@ rustfmt implementations/rust/**/*.rs
 # Go (gofmt)
 echo "Formatting go files using gofmt"
 gofmt -w .
+# Haxe (formatter)
+echo "Formatting haxe files using formatter"
+haxelib run formatter -s implementations/haxe/**/*.hx
 echo "=================================="
