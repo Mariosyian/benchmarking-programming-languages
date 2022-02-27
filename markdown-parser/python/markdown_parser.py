@@ -49,10 +49,10 @@ class MarkdownParser:
         :raises: A `ValueError` if no filename and no content has been provided to parse.
         :raises: A `FileNotFoundError` if the filename provided does not exist.
         """
-        if content is None and not string:
+        if (content is None or content.strip() == "") and not string:
             print("No file was provided.")
             sys.exit(1)
-        elif content is None and string:
+        elif (content is None or content.strip() == "") and string:
             print("No markdown string was provided.")
             sys.exit(1)
 
