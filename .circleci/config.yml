@@ -10,7 +10,7 @@ orbs:
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-    python_build_format_test:
+    python:
         # A list of available CircleCI Docker convenience images are available here: https://circleci.com/developer/images/image/cimg/python
         docker:
             - image: cimg/python:3.10.0
@@ -39,58 +39,56 @@ jobs:
             - run: echo "Checking formatting ..."
             - run: gofmt -l .
             - run: echo "Building ..."
-            - run: go run implementations/go/sieve/sieve_run.go implementations/go/sieve/sieve.go
+            - run: ./circleCI.sh --go
             - run: echo "Testing ..."
             - run: go test -cover implementations/go/**/*.go
-    rust_build_format_test:
+    rust:
         docker:
             - image: cimg/rust:1.57.0
         steps:
             - checkout
             - run: echo "Checking formatting ..."
             - run: rustfmt --check ./implementations/rust/**/*.rs
-            - run: echo "Building ..."
-            - run: rustc ./implementations/rust/sieve/sieve_run.rs -o ./implementations/rust/sieve/sieve_run
-            - run: ./implementations/rust/sieve/sieve_run
-            - run: echo "Testing ..."
-            - run: rustc --test ./implementations/rust/sieve/sieve_test.rs -o ./implementations/rust/sieve/sieve_test
-            - run: ./implementations/rust/sieve/sieve_test
-    java_build_test:
+            - run: echo "Building and Testing ..."
+            - run: ./circleCI.sh --rust
+    java:
         docker:
             - image: cimg/openjdk:17.0.0
         steps:
             - checkout
-            # No format check yet as requires NPM install
-            - run: echo "Compiling ..."
-            - run: javac -cp .:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar ./implementations/java/sieve/*.java
-            - run: echo "Running ..."
-            - run: java -cp ./implementations/java/sieve/:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar sieve_run
-            - run: echo "Testing ..."
-            - run: java -cp ./implementations/java/sieve/:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar sieve_test
-    c_build_test:
+            - run: echo "Compiling, building, and testing ..."
+            - run: ./circleCI.sh --java
+    c:
         docker:
             - image: cimg/base:2021.12
         steps:
             - checkout
             # No format check as C default formatting is inconsistent with the rest and I don't like it.
-            - run: echo "Compiling ..."
-            - run: gcc -Wall -c ./implementations/c/sieve/sieve.c ./implementations/c/sieve/sieve_run.c
-            - run: gcc -o ./implementations/c/sieve/sieve_run sieve.o sieve_run.o
-            - run: echo "Running ..."
-            - run: ./implementations/c/sieve/sieve_run
-            - run: echo "Testing ..."
-            - run: gcc -Wall -c ./implementations/c/sieve/sieve.c ./implementations/c/sieve/sieve_test.c ./dependencies/unity/unity.c
-            - run: gcc -o sieve_test sieve.o sieve_test.o unity.o
-            - run: ./sieve_test
-            - run: echo "Cleaning up..."
-            - run: rm sieve.o sieve_run.o sieve_test.o unity.o
+            - run: echo "Compiling, building, and testing ..."
+            - run: ./circleCI.sh --c
+    # haxe:
+    #     docker:
+    #         - image: cimg/base:2021.12
+    #     steps:
+    #         - checkout
+    #         - run: wget https://github.com/HaxeFoundation/haxe/releases/download/4.2.4/haxe-4.2.4-linux64.tar.gz
+    #         - run: tar xfvz haxe-4.2.4-linux64.tar.gz
+    #         - run: wget https://github.com/HaxeFoundation/neko/releases/download/v2-3-0/neko-2.3.0-linux64.tar.gz
+    #         - run: tar xfvz neko-2.3.0-linux64.tar.gz
+    #         - run: sudo ln -s $(pwd)/neko-2.3.0-linux64/neko /bin/neko
+    #         - run: sudo apt install haxe -y
+    #         - run: haxelib install utest
+    #         - run: haxelib install formatter
+    #         - run: echo "Checking formatting, compiling, building, and testing ..."
+    #         - run: ./circleCI.sh --haxe
 
 # Invoke jobs via workflows
 workflows:
     build_and_test:
         jobs:
-            - python_build_format_test
-            - go_build_format_test
-            - rust_build_format_test
-            - java_build_test
-            - c_build_test
+            - python
+            - go
+            - rust
+            - java
+            - c
+            # - haxe
