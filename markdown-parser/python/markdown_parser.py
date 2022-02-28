@@ -213,6 +213,9 @@ class MarkdownParser:
                 self.raw_html += f"<b>{content}</b>"
             elif special_chars_length == 3:
                 self.raw_html += f"<b><i>{content}</i></b>"
+            else:
+                self.append_invalid_regex(line)
+                return
         elif special_chars[0] == "_":
             if special_chars_length > 1 or len(matched_regex) == 0:
                 self.append_invalid_regex(line)
@@ -247,6 +250,7 @@ class MarkdownParser:
                 regex = None
             else:
                 self.append_invalid_regex(line)
+                return
 
         elif special_chars[0] == "[":
             regex = [
@@ -267,6 +271,7 @@ class MarkdownParser:
                 regex = None
             else:
                 self.append_invalid_regex(line)
+                return
 
         elif special_chars[0] == ">" and len(line) > 1 and line[1:].strip() != "":
             if not self.blockquote_item:
@@ -297,6 +302,7 @@ class MarkdownParser:
 
         else:
             self.append_invalid_regex(line)
+            return
 
         # Send the substring that contains more markdown content to be parsed again
         # e.g. # An h1 header with **bold text**
