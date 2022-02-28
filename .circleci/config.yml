@@ -29,8 +29,11 @@ jobs:
             - run: echo "Building ..."
             - run: python --version
             # Test
-            - run: echo "Testing ..."
-            - run: pytest --cov . --cov-branch . --cov-report term-missing --cov-fail-under 100
+            - run: echo "Testing toy problems ..."
+            - run: pytest --cov $(pwd)/implementations/ --cov-branch $(pwd)/implementations/ --cov-report term-missing --cov-fail-under 100
+            # Test
+            - run: echo "Testing markdown parser..."
+            - run: pytest --cov $(pwd)/markdown-parser/ --cov-branch $(pwd)/markdown-parser/ --cov-report term-missing --cov-fail-under 80
 
 # Invoke jobs via workflows
 workflows:
