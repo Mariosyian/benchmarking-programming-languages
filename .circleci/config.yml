@@ -21,28 +21,25 @@ jobs:
                 pkg-manager: pip
                 # app-dir: ~/project/package-directory/  # If your requirements.txt isn't in the root directory.
                 pip-dependency-file: requirements_dev.txt # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
-            # Format
             - run: echo "Checking formatting ..."
             - run: black --check .
-            # Build
+            - run: isort --check .
             - run: echo "Building ..."
             - run: python --version
-            # Test
-            - run: echo "Testing ..."
-            - run: pytest --cov . --cov-branch . --cov-report term-missing --cov-fail-under 100
+            - run: echo "Testing toy problems ..."
+            - run: pytest --cov $(pwd)/implementations/ --cov-branch $(pwd)/implementations/ --cov-report term-missing --cov-fail-under 100
+            - run: echo "Testing markdown parser..."
+            - run: pytest --cov $(pwd)/markdown-parser/ --cov-branch $(pwd)/markdown-parser/ --cov-report term-missing --cov-fail-under 80
     go_build_format_test:
         docker:
             - image: cimg/go:1.17.5
         # Checkout the code as the first step. This is a dedicated CircleCI step.
         steps:
             - checkout
-            # Format
             - run: echo "Checking formatting ..."
             - run: gofmt -l .
-            # Build
             - run: echo "Building ..."
             - run: go run implementations/go/sieve/sieve_run.go implementations/go/sieve/sieve.go
-            # Test
             - run: echo "Testing ..."
             - run: go test -cover implementations/go/**/*.go
     rust_build_format_test:
@@ -50,14 +47,11 @@ jobs:
             - image: cimg/rust:1.57.0
         steps:
             - checkout
-            # Format
             - run: echo "Checking formatting ..."
             - run: rustfmt --check ./implementations/rust/**/*.rs
-            # Build
             - run: echo "Building ..."
             - run: rustc ./implementations/rust/sieve/sieve_run.rs -o ./implementations/rust/sieve/sieve_run
             - run: ./implementations/rust/sieve/sieve_run
-            # Test
             - run: echo "Testing ..."
             - run: rustc --test ./implementations/rust/sieve/sieve_test.rs -o ./implementations/rust/sieve/sieve_test
             - run: ./implementations/rust/sieve/sieve_test
