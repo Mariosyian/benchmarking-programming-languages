@@ -65,7 +65,7 @@ JUNIT="${DEPENDENCIES_DIR}/junit/junit-4.10.jar"
 HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
 UNITY="${DEPENDENCIES_DIR}/unity/unity.c"
 
-LANGUAGES=(rust go java c python)
+LANGUAGES=(rust go java c python haxe)
 ALGORITHMS=(sieve)
 
 INTERVAL=1
@@ -329,6 +329,19 @@ for language in "${LANGUAGES[@]}"; do
                 then
                     echo "> Running Python tests for $algorithm"
                     pytest .
+                    if [ $(echo $?) -ne 0 ]
+                    then
+                        exit 1
+                    fi
+                fi
+                ;;
+            "haxe")
+                HAXE_ALGORITHM=($algorithm)
+                COMMAND="haxe --main ${HAXE_ALGORITHM[*]^}_Run.hx"
+                if [ $TEST -eq 1 ]
+                then
+                    echo "> Running Haxe tests for $algorithm"
+                    haxe --main "${HAXE_ALGORITHM[*]^}_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
                     if [ $(echo $?) -ne 0 ]
                     then
                         exit 1
