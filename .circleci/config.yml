@@ -29,11 +29,11 @@ jobs:
             - run: echo "Building ..."
             - run: python --version
             # Test
-            - run: echo "Testing toy problems..."
+            - run: echo "Testing toy problems ..."
             - run: pytest --cov $(pwd)/implementations/ --cov-branch $(pwd)/implementations/ --cov-report term-missing --cov-fail-under 100
-            - run: echo "Testing markdown parser..."
+            - run: echo "Testing markdown parser ..."
             - run: pytest --cov $(pwd)/markdown-parser/ --cov-branch $(pwd)/markdown-parser/ --cov-report term-missing --cov-fail-under 80
-    go_build_format_test:
+    go:
         docker:
             - image: cimg/go:1.17.5
         # Checkout the code as the first step. This is a dedicated CircleCI step.
@@ -43,9 +43,9 @@ jobs:
             - run: echo "Checking formatting ..."
             - run: gofmt -l .
             # Build and Test
-            - run: echo "Building..."
+            - run: echo "Building ..."
             - run: $(pwd)/circleCI.sh --go
-            - run: echo "Testing..."
+            - run: echo "Testing ..."
             - run: go test -cover $(pwd)/implementations/go/**/*.go
     rust:
         docker:
@@ -56,7 +56,7 @@ jobs:
             - run: echo "Checking formatting ..."
             - run: rustfmt --check $(pwd)/implementations/rust/**/*.rs
             # Build and Test
-            - run: echo "Building and Testin..."
+            - run: echo "Building and testing ..."
             - run: $(pwd)/circleCI.sh --rust
     java:
         docker:
@@ -87,7 +87,7 @@ jobs:
     #         - run: haxelib install utest
     #         - run: haxelib install formatter
     #         - run: echo "Checking formatting, compiling, building, and testing ..."
-    #         - run: ./circleCI.sh --haxe
+    #         - run: $(pwd)/circleCI.sh --haxe
 
 # Invoke jobs via workflows
 workflows:
