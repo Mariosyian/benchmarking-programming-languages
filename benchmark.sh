@@ -61,12 +61,12 @@ BENCHMARKS_FILE="${BENCHMARKS_DIR}/benchmarks"
 
 DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
 SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
+JUNIT="${DEPENDENCIES_DIR}/junit/junit-4.10.jar"
+HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
+UNITY="${DEPENDENCIES_DIR}/unity/unity.c"
 
-LANGUAGES=(python)
+LANGUAGES=(rust go java c python)
 ALGORITHMS=(sieve)
-
-EXTENSIONS=(["python"]="py")
-# EXTENSIONS["c"]="c"
 
 INTERVAL=1
 
@@ -81,12 +81,11 @@ function float_to_int() {
     printf "%.0f\n" "$1"
 }
 
-# Calculates the processes elapsed time, CPU usage, and the RSS and VMS in KB
+# Calculates the processes elapsed time (s), CPU usage (%), the RSS (KB), and VMS (KB)
 # using the `syrupy` script. The function then writes the results to the benchmarks
 # file.
 #
 # Parameters:
-#   - The language being used (language command e.g. `python` for python).
 #   - The command to be run.
 # Returns:
 #   The elapsed time between the execution of the given command and the time it finished.
@@ -99,14 +98,14 @@ function time_taken() {
     TEMP_FILE="tmp_bench"
     
     # Get the command output and cut the top line (header line)
-    { python $SYRUPY -S -C --no-raw-process-log $1 $2 2> /dev/null; } | sed 1d > $TEMP_FILE
+    { python $SYRUPY -S -C --no-raw-process-log "$@" 2> /dev/null; } | sed 1d > $TEMP_FILE
 
-    ELAPSED_TIME=$(tail $TEMP_FILE -n 1 | awk '{print $4}')
+    LAST_LINE=$(tail $TEMP_FILE -n 1)
+    ELAPSED_TIME=$(echo $LAST_LINE | awk '{print $4}')
+    AVERAGE_CPU=$(float_to_int $(echo $LAST_LINE | awk '{print $5}'))
+    AVERAGE_RSS=$(echo $LAST_LINE | awk '{print $7}')
+    AVERAGE_VMS=$(echo $LAST_LINE | awk '{print $8}')
 
-    AVERAGE_CPU=0
-    AVERAGE_RAM=0
-    AVERAGE_RSS=0
-    AVERAGE_VMS=0
     # Cut the last line from the file as it is only used for the total elapsed time
     # of the process under investigation.
     # Accumulate the sum of all readings for each measurement
@@ -131,7 +130,7 @@ function time_taken() {
     fi
 
     # Print the results into the benchmark file
-    echo -e "\t${language}\t\t|\t${algorithm}\t\t|\t${ELAPSED_TIME}\t\t|\t${AVERAGE_CPU}\t\t|\t${AVERAGE_RSS}\t\t|\t${AVERAGE_VMS}\t\t" >> $BENCHMARKS_FILE
+    echo -e "${language}|${algorithm}|${ELAPSED_TIME}|${AVERAGE_CPU}|${AVERAGE_RSS}|${AVERAGE_VMS}" >> $BENCHMARKS_FILE
 
     # Cleanup
     # - Delete temporary file(s)
@@ -142,20 +141,62 @@ function time_taken() {
     echo $ELAPSED_TIME
 }
 
-echo -e "\tLANGUAGE\t|\tALGORITHM\t|\tELAPSED (s)\t|\tAvg. CPU (%)\t|\tAvg. RSS (KB)\t|\tAvg. VMS (KB)" > $BENCHMARKS_FILE
+# TODO: Add --clean flag to cleanup compiled files
+# FILES_TO_CLEANUP = ()
+# TODO: Add --test flag to run tests before executing
+echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)" > $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
     cd $PROGRAMS_DIR/$language
-    EXTENSION=${EXTENSIONS[${language}]}
 
     for algorithm in "${ALGORITHMS}"; do
         cd $algorithm
 
-        echo -n "Running ${language}/${algorithm}..."
-        TIME_TAKEN=$(time_taken $language ${PROGRAMS_DIR}/${language}/${algorithm}/${algorithm}_run.${EXTENSION})
-        echo $TIME_TAKEN
+        if [ $language == "rust" ]
+        then
+            # Compile
+            rustc "${algorithm}_run.rs" -o "${algorithm}_run"
+            # Run algorithm
+            COMMAND="./${algorithm}_run"
+            # Run tests
+            # rustc --test "${algorithm}_test.rs" -o "${algorithm}_test"
+            # ./${algorithm}_test
+        elif [ $language == "go" ]
+        then
+            # Run algorithm
+            COMMAND="go run ."
+            # Run tests
+            # TODO
+        elif [ $language == "java" ]
+        then
+            # Compile
+            javac -cp .:$JUNIT:$HAMCREST *.java
+            # Run algorithm
+            COMMAND="java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_run"
+            # Run tests
+            # java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_test
+        elif [ $language == "c" ]
+        then
+            # Compile
+            gcc -Wall -c "${algorithm}.c" "${algorithm}_run.c"
+            gcc -o "${algorithm}_run" "${algorithm}.o" "${algorithm}_run.o"
+            # Run algorithm
+            COMMAND="./${algorithm}_run"
+            # Run tests
+            # gcc -Wall -c "${algorithm}.c" "${algorithm}_test.c" $UNITY
+            # gcc -o "${algorithm}_test" "${algorithm}.o" "${algorithm}_test.o" "unity.o"
+            # ./${algorithm}_test
+        elif [ $language == "python" ]
+        then
+            COMMAND="python ${algorithm}_run.py"
+        fi
 
+        echo -ne "[${language}/${algorithm}]\t..."
+        TIME_TAKEN=$(time_taken ${COMMAND})
+        echo $TIME_TAKEN
         cd ..
         sleep $INTERVAL
     done
 done
 cd $PROGRAMS_DIR
+cat $BENCHMARKS_FILE | column -t -s "|" | tee $BENCHMARKS_FILE > /dev/null
+echo "Results written to $BENCHMARKS_FILE"

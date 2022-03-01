@@ -10,7 +10,7 @@ orbs:
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-    build_format_test:
+    python_build_format_test:
         # A list of available CircleCI Docker convenience images are available here: https://circleci.com/developer/images/image/cimg/python
         docker:
             - image: cimg/python:3.10.0
@@ -21,22 +21,76 @@ jobs:
                 pkg-manager: pip
                 # app-dir: ~/project/package-directory/  # If your requirements.txt isn't in the root directory.
                 pip-dependency-file: requirements_dev.txt # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
-            # Format
             - run: echo "Checking formatting ..."
             - run: black --check .
             - run: isort --check .
-            # Build
             - run: echo "Building ..."
             - run: python --version
-            # Test
             - run: echo "Testing toy problems ..."
             - run: pytest --cov $(pwd)/implementations/ --cov-branch $(pwd)/implementations/ --cov-report term-missing --cov-fail-under 100
-            # Test
             - run: echo "Testing markdown parser..."
             - run: pytest --cov $(pwd)/markdown-parser/ --cov-branch $(pwd)/markdown-parser/ --cov-report term-missing --cov-fail-under 80
+    go_build_format_test:
+        docker:
+            - image: cimg/go:1.17.5
+        # Checkout the code as the first step. This is a dedicated CircleCI step.
+        steps:
+            - checkout
+            - run: echo "Checking formatting ..."
+            - run: gofmt -l .
+            - run: echo "Building ..."
+            - run: go run implementations/go/sieve/sieve_run.go implementations/go/sieve/sieve.go
+            - run: echo "Testing ..."
+            - run: go test -cover implementations/go/**/*.go
+    rust_build_format_test:
+        docker:
+            - image: cimg/rust:1.57.0
+        steps:
+            - checkout
+            - run: echo "Checking formatting ..."
+            - run: rustfmt --check ./implementations/rust/**/*.rs
+            - run: echo "Building ..."
+            - run: rustc ./implementations/rust/sieve/sieve_run.rs -o ./implementations/rust/sieve/sieve_run
+            - run: ./implementations/rust/sieve/sieve_run
+            - run: echo "Testing ..."
+            - run: rustc --test ./implementations/rust/sieve/sieve_test.rs -o ./implementations/rust/sieve/sieve_test
+            - run: ./implementations/rust/sieve/sieve_test
+    java_build_test:
+        docker:
+            - image: cimg/openjdk:17.0.0
+        steps:
+            - checkout
+            # No format check yet as requires NPM install
+            - run: echo "Compiling ..."
+            - run: javac -cp .:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar ./implementations/java/sieve/*.java
+            - run: echo "Running ..."
+            - run: java -cp ./implementations/java/sieve/:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar sieve_run
+            - run: echo "Testing ..."
+            - run: java -cp ./implementations/java/sieve/:./dependencies/junit/junit-4.10.jar:./dependencies/hamcrest/hamcrest-2.2.jar sieve_test
+    c_build_test:
+        docker:
+            - image: cimg/base:2021.12
+        steps:
+            - checkout
+            # No format check as C default formatting is inconsistent with the rest and I don't like it.
+            - run: echo "Compiling ..."
+            - run: gcc -Wall -c ./implementations/c/sieve/sieve.c ./implementations/c/sieve/sieve_run.c
+            - run: gcc -o ./implementations/c/sieve/sieve_run sieve.o sieve_run.o
+            - run: echo "Running ..."
+            - run: ./implementations/c/sieve/sieve_run
+            - run: echo "Testing ..."
+            - run: gcc -Wall -c ./implementations/c/sieve/sieve.c ./implementations/c/sieve/sieve_test.c ./dependencies/unity/unity.c
+            - run: gcc -o sieve_test sieve.o sieve_test.o unity.o
+            - run: ./sieve_test
+            - run: echo "Cleaning up..."
+            - run: rm sieve.o sieve_run.o sieve_test.o unity.o
 
 # Invoke jobs via workflows
 workflows:
     build_and_test:
         jobs:
-            - build_format_test
+            - python_build_format_test
+            - go_build_format_test
+            - rust_build_format_test
+            - java_build_test
+            - c_build_test
