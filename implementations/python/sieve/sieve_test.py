@@ -1,5 +1,6 @@
-from sieve import is_prime, sieve
 from sieve_run import run
+
+from sieve import is_prime, sieve
 
 
 # Test is_prime

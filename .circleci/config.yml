@@ -30,7 +30,7 @@ jobs:
             - run: pytest --cov $(pwd)/implementations/ --cov-branch $(pwd)/implementations/ --cov-report term-missing --cov-fail-under 100
             - run: echo "Testing markdown parser..."
             - run: pytest --cov $(pwd)/markdown-parser/ --cov-branch $(pwd)/markdown-parser/ --cov-report term-missing --cov-fail-under 80
-    go_build_format_test:
+    go:
         docker:
             - image: cimg/go:1.17.5
         # Checkout the code as the first step. This is a dedicated CircleCI step.
@@ -39,25 +39,25 @@ jobs:
             - run: echo "Checking formatting ..."
             - run: gofmt -l .
             - run: echo "Building ..."
-            - run: ./circleCI.sh --go
+            - run: $(pwd)/circleCI.sh --go
             - run: echo "Testing ..."
-            - run: go test -cover implementations/go/**/*.go
+            - run: go test -cover $(pwd)/implementations/go/**/*.go
     rust:
         docker:
             - image: cimg/rust:1.57.0
         steps:
             - checkout
             - run: echo "Checking formatting ..."
-            - run: rustfmt --check ./implementations/rust/**/*.rs
+            - run: rustfmt --check $(pwd)/implementations/rust/**/*.rs
             - run: echo "Building and Testing ..."
-            - run: ./circleCI.sh --rust
+            - run: $(pwd)/circleCI.sh --rust
     java:
         docker:
             - image: cimg/openjdk:17.0.0
         steps:
             - checkout
             - run: echo "Compiling, building, and testing ..."
-            - run: ./circleCI.sh --java
+            - run: $(pwd)/circleCI.sh --java
     c:
         docker:
             - image: cimg/base:2021.12
@@ -65,7 +65,7 @@ jobs:
             - checkout
             # No format check as C default formatting is inconsistent with the rest and I don't like it.
             - run: echo "Compiling, building, and testing ..."
-            - run: ./circleCI.sh --c
+            - run: $(pwd)/circleCI.sh --c
     # haxe:
     #     docker:
     #         - image: cimg/base:2021.12
@@ -80,7 +80,7 @@ jobs:
     #         - run: haxelib install utest
     #         - run: haxelib install formatter
     #         - run: echo "Checking formatting, compiling, building, and testing ..."
-    #         - run: ./circleCI.sh --haxe
+    #         - run: $(pwd)/circleCI.sh --haxe
 
 # Invoke jobs via workflows
 workflows:
