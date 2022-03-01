@@ -50,10 +50,16 @@ A general purpose (and hopefully easily expandable) `benchmark.sh` bash script h
 ```
 # Navigate to the root of this repository
 $ ./benchmark.sh
+
 # View the benchmark report
 $ more ./benchmarks/benchmarks
-	LANGUAGE	|	ALGORITHM	|	ELAPSED (s)	|	Avg. CPU (%)	|	Avg. RSS (KB)	|	Avg. VMS (KB)
-	python		|	sieve		|	00:04		|	61		        |	7055		    |	12949
+LANGUAGE  ALGORITHM  ELAPSED (s)  Avg. CPU (%)  Avg. RSS (KB)  Avg. VMS (KB)  Score
+python    sieve      3            76            6644           12092          150
+
+CPU: 		AMD Ryzen 9 3900X
+Processors: 	12 Cores / 24 Threads
+Memory: 	~15 GB
+Average Score: 	150
 ```
 
 ## Java
