@@ -12,9 +12,5 @@ echo "Formatting go files using gofmt"
 gofmt -w .
 # Haxe (formatter)
 echo "Formatting haxe files using formatter"
-for file in $(ls implementations/haxe/**/*.hx)
-do
-    haxelib run formatter -s $file
-done
+haxelib run formatter -s implementations/haxe -v
 echo "=================================="
-
