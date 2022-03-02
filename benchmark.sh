@@ -66,10 +66,11 @@ HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
 UNITY="${DEPENDENCIES_DIR}/unity/unity.c"
 
 LANGUAGES=(rust go java c python haxe)
-ALGORITHMS=(sieve)
+ALGORITHMS=(sieve astar)
 
 INTERVAL=1
 
+# TODO: Add flags for specific languages and algorithms (e.g. ./benchmark.sh --java, ./benchmark.sh --sieve)
 # Capture any CL flags provided
 TEST=0
 BENCHMARK=1
@@ -264,7 +265,11 @@ echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)
 for language in "${LANGUAGES[@]}"; do
     cd $PROGRAMS_DIR/$language
 
-    for algorithm in "${ALGORITHMS}"; do
+    for algorithm in "${ALGORITHMS[@]}"; do
+        if [ ! -d "$algorithm" ]
+        then
+            continue
+        fi
         cd $algorithm
 
         case $language in

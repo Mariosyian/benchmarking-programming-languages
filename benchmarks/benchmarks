@@ -1,12 +1,13 @@
 LANGUAGE  ALGORITHM  ELAPSED (s)  Avg. CPU (%)  Avg. RSS (KB)  Avg. VMS (KB)  Score
-rust      sieve      2            51            1170           3032           260
-go        sieve      1            2             7250           652800         1900
-java      sieve      1            7             6402           235276         820
-c         sieve      1            6             294            1250           1060
-python    sieve      3            75            6641           12191          150
-haxe      sieve      1            1             13202          17622          3400
+rust      sieve      2            52            1174           3032           260
+go        sieve      1            2             7448           689538         1900
+java      sieve      1            7             6482           235276         820
+java      astar      1            1             4308           156850         3400
+c         sieve      1            6             258            1250           1075
+python    sieve      3            74            6476           12092          150
+haxe      sieve      1            1             13248          17622          3400
 
 CPU: 		AMD Ryzen 9 3900X
 Processors: 	12 Cores / 24 Threads
 Memory: 	~15 GB
-Average Score: 	1265
+Average Score: 	1572

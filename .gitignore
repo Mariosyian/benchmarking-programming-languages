@@ -6,3 +6,5 @@
 .coverage
 # Python cache
 **/__pycache__/
+# Java compiled files
+**/*.class
