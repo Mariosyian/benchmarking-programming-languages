@@ -66,7 +66,7 @@ HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
 UNITY="${DEPENDENCIES_DIR}/unity/unity.c"
 
 LANGUAGES=(rust go java c python haxe)
-ALGORITHMS=(sieve)
+ALGORITHMS=(sieve astar)
 
 INTERVAL=1
 
@@ -283,13 +283,12 @@ for language in "${LANGUAGES[@]}"; do
                 fi
                 ;;
             "go")
-                COMMAND="go run ."
-                if [ $TEST -eq 1 ]
-                then
+                go build .
+                COMMAND="./${algorithm}_run"
+                if [ $TEST -eq 1 ]; then
                     echo "> Running Go tests for $algorithm"
                     go test "${algorithm}_test.go"
-                    if [ $(echo $?) -ne 0 ]
-                    then
+                    if [ $(echo $?) -ne 0 ]; then
                         exit 1
                     fi
                 fi
