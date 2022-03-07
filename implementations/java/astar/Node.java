@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Represents a standalone node of a graph.
@@ -13,8 +12,8 @@ public class Node implements Comparable<Node> {
     public ArrayList<Edge> neighbours;
 
     // Evaluation functions
-    public double f = Double.MAX_VALUE;
-    public double g = Double.MAX_VALUE;
+    public double costOfNode = Double.MAX_VALUE;
+    public double distanceToStartNode = Double.MAX_VALUE;
 
     public double heuristic; 
 
@@ -24,24 +23,20 @@ public class Node implements Comparable<Node> {
         this.neighbours = new ArrayList<Edge>();
     }
 
-    public void addEdge(int weight, Node node) {
-        neighbours.add(new Edge(weight, node));
+    public void addEdge(Node node, int weight) {
+        neighbours.add(new Edge(node, weight));
     }
     
-    public double calculateHeuristic() {
+    public double getHeuristic() {
         return this.heuristic;
     }
 
     public boolean equals(Node node) {
         return this.id == node.id;
     }
-
-    public Node getNode() {
-        return this;
-    }
  
     @Override
     public int compareTo(Node node) {
-        return Double.compare(this.f, node.f);
+        return Double.compare(this.costOfNode, node.costOfNode);
     }
 }

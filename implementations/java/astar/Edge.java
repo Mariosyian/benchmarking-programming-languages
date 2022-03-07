@@ -6,8 +6,8 @@ public class Edge {
     public int weight;
     public Node node;
     
-    public Edge(int weight, Node node) {
-        this.weight = weight;
+    public Edge(Node node, int weight) {
         this.node = node;
+        this.weight = weight;
     }
 }

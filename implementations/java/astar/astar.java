@@ -1,4 +1,3 @@
-import java.util.ArrayList;
 import java.util.PriorityQueue;
 
 /**
@@ -27,11 +26,11 @@ public class astar {
      *
      * @return The target node if found, the `null` value otherwise.
      */
-    public static Node run(Node start, Node target) {
+    public Node run(Node start, Node target) {
         PriorityQueue<Node> finishedNodes = new PriorityQueue<Node>();
         PriorityQueue<Node> visitedNodes = new PriorityQueue<Node>();
     
-        start.f = start.g + start.calculateHeuristic();
+        start.costOfNode = start.distanceToStartNode + start.getHeuristic();
         visitedNodes.add(start);
     
         while (!visitedNodes.isEmpty()) {
@@ -42,18 +41,18 @@ public class astar {
 
             for (Edge edge : node.neighbours) {
                 Node neighbour = edge.node;
-                double totalWeight = node.g + edge.weight;
+                double totalWeight = node.distanceToStartNode + edge.weight;
     
                 if (!visitedNodes.contains(neighbour) && !finishedNodes.contains(neighbour)) {
                     neighbour.parent = node;
-                    neighbour.g = totalWeight;
-                    neighbour.f = neighbour.g + neighbour.calculateHeuristic();
+                    neighbour.distanceToStartNode = totalWeight;
+                    neighbour.costOfNode = neighbour.distanceToStartNode + neighbour.getHeuristic();
                     visitedNodes.add(neighbour);
                 } else {
-                    if (totalWeight < neighbour.g) {
+                    if (totalWeight < neighbour.distanceToStartNode) {
                         neighbour.parent = node;
-                        neighbour.g = totalWeight;
-                        neighbour.f = neighbour.g + neighbour.calculateHeuristic();
+                        neighbour.distanceToStartNode = totalWeight;
+                        neighbour.costOfNode = neighbour.distanceToStartNode + neighbour.getHeuristic();
     
                         if (finishedNodes.contains(neighbour)) {
                             finishedNodes.remove(neighbour);
