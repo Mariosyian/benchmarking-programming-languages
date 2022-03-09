@@ -14,6 +14,8 @@
 //
 package main
 
+import "fmt"
+
 // Given a start and finish node, derives the shortest path (if any) between them.
 //
 // inputs:
@@ -23,43 +25,45 @@ package main
 // returns:
 // The target node if found, the `null` value otherwise.
 func astar(start Node, target Node) *Node {
-	finishedNodes := NewPriorityQueue()
-	visitedNodes := NewPriorityQueue()
+	finishedNodes := CreatePriorityQueue()
+	visitedNodes := CreatePriorityQueue()
 
 	start.costOfNode = start.distanceToStartNode + start.GetHeuristic()
 	visitedNodes.Push(&start)
 
 	for visitedNodes.Len() > 0 {
-		node := visitedNodes.Pop().(Node)
-		if node.Equals(target) {
-			return &node
+		qNode := visitedNodes.Pop().(QueueNode)
+		currentNode := qNode.node
+		if currentNode.Equals(target) {
+			return currentNode
 		}
 
-		for _, edge := range node.neighbours {
-			neighbour := *(edge.node)
-			totalWeight := node.distanceToStartNode + edge.weight
+		for _, edge := range currentNode.neighbours {
+			fmt.Println(edge)
+			neighbour := *(edge.target)
+			totalWeight := currentNode.distanceToStartNode + edge.weight
 
-			if !visitedNodes.Contains(neighbour) && !finishedNodes.Contains(neighbour) {
-				neighbour.parent = &node
+			if !visitedNodes.Contains(*neighbour.qNode) {
+				neighbour.parent = currentNode
 				neighbour.distanceToStartNode = totalWeight
 				neighbour.costOfNode = neighbour.distanceToStartNode + neighbour.GetHeuristic()
 				visitedNodes.Push(&neighbour)
 			} else {
 				if totalWeight < neighbour.distanceToStartNode {
-					neighbour.parent = &node
+					neighbour.parent = currentNode
 					neighbour.distanceToStartNode = totalWeight
 					neighbour.costOfNode = neighbour.distanceToStartNode + neighbour.GetHeuristic()
 
-					if finishedNodes.Contains(neighbour) {
-						// finishedNodes.Remove(neighbour)
+					if finishedNodes.Contains(*neighbour.qNode) {
+						finishedNodes.Remove(neighbour.qNode)
 						visitedNodes.Push(&neighbour)
 					}
 				}
 			}
 		}
 
-		// visitedNodes.Remove(node)
-		finishedNodes.Push(&node)
+		visitedNodes.Remove(&qNode)
+		finishedNodes.Push(currentNode)
 	}
 
 	return nil

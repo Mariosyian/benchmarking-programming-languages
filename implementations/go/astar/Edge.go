@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // Represents the encapsulation of a `Node` with a weight, so it can be
 // represented as a connected component with a heuristic in a graph.
 //
@@ -8,13 +10,19 @@ package main
 //  - weight {int} The weight/cost to travel this edge.
 type Edge struct {
 	weight int
-	node   *Node
+	source *Node
+	target   *Node
 }
 
-func CreateEdge(node Node, weight int) *Edge {
+func CreateEdge(source Node, target Node, weight int) *Edge {
 	edge := new(Edge)
-	edge.node = &node
+	edge.source = &source
+	edge.target = &target
 	edge.weight = weight
 
 	return edge
+}
+
+func (edge Edge) String() string {
+	return fmt.Sprintf("%d->%d (%d)", edge.source.id, edge.target.id, edge.weight)
 }
