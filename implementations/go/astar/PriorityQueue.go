@@ -33,6 +33,7 @@ func (pq *PriorityQueue) Push(x interface{}) {
 	node.index = len(*pq)
 	*pq = append(*pq, &node)
 	heap.Fix(pq, node.index)
+	fmt.Println(node)
 }
 
 func (pq *PriorityQueue) Pop() interface{} {

@@ -45,7 +45,7 @@ func (node *Node) AddEdge(target Node, weight int) {
 	node.neighbours = append(node.neighbours, edge)
 }
 
-func (node *Node) Equals(n Node) bool {
+func (node *Node) Equals(n *Node) bool {
 	return node.id == n.id
 }
 

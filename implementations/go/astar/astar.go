@@ -14,7 +14,7 @@
 //
 package main
 
-// import "fmt"
+import "fmt"
 
 // Given a start and finish node, derives the shortest path (if any) between them.
 //
@@ -24,12 +24,12 @@ package main
 //
 // returns:
 // The target node if found, the `null` value otherwise.
-func astar(start Node, target Node) *Node {
+func astar(start *Node, target *Node) *Node {
 	finishedNodes := CreatePriorityQueue()
 	visitedNodes := CreatePriorityQueue()
 
 	start.costOfNode = start.distanceToStartNode + start.GetHeuristic()
-	visitedNodes.Push(start)
+	visitedNodes.Push(*start)
 
 	for visitedNodes.Len() > 0 {
 		currentNode := visitedNodes.Pop().(Node)
@@ -45,6 +45,7 @@ func astar(start Node, target Node) *Node {
 				neighbour.parent = &currentNode
 				neighbour.distanceToStartNode = totalWeight
 				neighbour.costOfNode = neighbour.distanceToStartNode + neighbour.GetHeuristic()
+				fmt.Println(neighbour)
 				visitedNodes.Push(neighbour)
 			} else {
 				if totalWeight < neighbour.distanceToStartNode {

@@ -44,7 +44,7 @@ func main() {
 	n9.AddEdge(*n7, 1)
 	n9.AddEdge(*target, 5)
 
-	result := astar(*start, *target)
+	result := astar(start, target)
 	if result == nil {
 		fmt.Println("No route was found")
 		return
