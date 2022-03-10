@@ -14,7 +14,7 @@
 //
 package main
 
-import "fmt"
+// import "fmt"
 
 // Given a start and finish node, derives the shortest path (if any) between them.
 //
@@ -29,40 +29,38 @@ func astar(start Node, target Node) *Node {
 	visitedNodes := CreatePriorityQueue()
 
 	start.costOfNode = start.distanceToStartNode + start.GetHeuristic()
-	visitedNodes.Push(&start)
+	visitedNodes.Push(start)
 
 	for visitedNodes.Len() > 0 {
-		qNode := visitedNodes.Pop().(QueueNode)
-		currentNode := qNode.node
+		currentNode := visitedNodes.Pop().(Node)
 		if currentNode.Equals(target) {
-			return currentNode
+			return &currentNode
 		}
 
 		for _, edge := range currentNode.neighbours {
-			fmt.Println(edge)
 			neighbour := *(edge.target)
 			totalWeight := currentNode.distanceToStartNode + edge.weight
 
-			if !visitedNodes.Contains(*neighbour.qNode) {
-				neighbour.parent = currentNode
+			if !visitedNodes.Contains(neighbour) {
+				neighbour.parent = &currentNode
 				neighbour.distanceToStartNode = totalWeight
 				neighbour.costOfNode = neighbour.distanceToStartNode + neighbour.GetHeuristic()
-				visitedNodes.Push(&neighbour)
+				visitedNodes.Push(neighbour)
 			} else {
 				if totalWeight < neighbour.distanceToStartNode {
-					neighbour.parent = currentNode
+					neighbour.parent = &currentNode
 					neighbour.distanceToStartNode = totalWeight
 					neighbour.costOfNode = neighbour.distanceToStartNode + neighbour.GetHeuristic()
 
-					if finishedNodes.Contains(*neighbour.qNode) {
-						finishedNodes.Remove(neighbour.qNode)
-						visitedNodes.Push(&neighbour)
+					if finishedNodes.Contains(neighbour) {
+						finishedNodes.Remove(&neighbour)
+						visitedNodes.Push(neighbour)
 					}
 				}
 			}
 		}
 
-		visitedNodes.Remove(&qNode)
+		visitedNodes.Remove(&currentNode)
 		finishedNodes.Push(currentNode)
 	}
 

@@ -6,7 +6,7 @@ import (
 )
 
 // A PriorityQueue implements heap.Interface and holds `Node`s.
-type PriorityQueue []*QueueNode
+type PriorityQueue []*Node
 
 func CreatePriorityQueue() *PriorityQueue {
 	pq := new(PriorityQueue)
@@ -19,7 +19,7 @@ func (pq PriorityQueue) Len() int {
 }
 
 func (pq PriorityQueue) Less(node1 int, node2 int) bool {
-	return pq[node1].node.costOfNode > pq[node2].node.costOfNode
+	return pq[node1].costOfNode > pq[node2].costOfNode
 }
 
 func (pq PriorityQueue) Swap(node1 int, node2 int) {
@@ -29,34 +29,37 @@ func (pq PriorityQueue) Swap(node1 int, node2 int) {
 }
 
 func (pq *PriorityQueue) Push(x interface{}) {
-	node := x.(*Node)
-	qNode := node.qNode
-	qNode.index = len(*pq)
-	*pq = append(*pq, qNode)
-	heap.Fix(pq, qNode.index)
+	node := x.(Node)
+	node.index = len(*pq)
+	*pq = append(*pq, &node)
+	heap.Fix(pq, node.index)
 }
 
 func (pq *PriorityQueue) Pop() interface{} {
 	old := *pq
 	node := old[len(old) - 1]
-	pq.Remove(node)
+	pq.Remove(node)	// Calls heap.Fix
 	return *node
 }
 
-func (pq *PriorityQueue) Remove(qNode *QueueNode) {
-	new := []*QueueNode{}
+func (pq *PriorityQueue) Remove(node *Node) {
+	new := []*Node{}
 	for _, n := range *pq {
-		if n.id != qNode.id {
+		if n.id != node.id {
 			new = append(new, n)
 		}
 	}
 	*pq = new
-	heap.Fix(pq, qNode.index)
+	// If the node removed is the last one, then an index
+	// out of bounds error is thrown
+	if node.index < len(*pq) - 1 {
+		heap.Fix(pq, node.index)
+	}
 }
 
-func (pq PriorityQueue) Contains(qNode QueueNode) bool {
+func (pq PriorityQueue) Contains(node Node) bool {
 	for _, n := range pq {
-		if n.id == qNode.id {
+		if n.id == node.id {
 			return true
 		}
 	}
@@ -66,13 +69,21 @@ func (pq PriorityQueue) Contains(qNode QueueNode) bool {
 func (pq PriorityQueue) PrintQueue() {
 	fmt.Println("Number of elements in the queue:", len(pq))
 	for _, node := range pq {
-		fmt.Println("Node ID:{", node.node.id, "}, Index:{", node.index, "}")
-		if node.node.parent != nil {
-			fmt.Println("     Heuristic:{", node.node.heuristic, "}, ParentID:{", node.node.parent.id, "}")
+		fmt.Println("Node ID:{", node.id, "}, Index:{", node.index, "}")
+		if node.parent != nil {
+			fmt.Println("     Heuristic:{", node.heuristic, "}, ParentID:{", node.parent.id, "}")
 		} else {
-			fmt.Println("     Heuristic:{", node.node.heuristic, "}, ParentID:{N/A}")
+			fmt.Println("     Heuristic:{", node.heuristic, "}, ParentID:{N/A}")
 		}
-		fmt.Println("     DistToSrc:{", node.node.distanceToStartNode, "}, Cost:{", node.node.costOfNode, "}")
+		fmt.Println("     DistToSrc:{", node.distanceToStartNode, "}, Cost:{", node.costOfNode, "}")
 	}
 	fmt.Println("-------------------------------------------------")
+}
+
+func (pq PriorityQueue) PrintNodes() {
+	fmt.Print("[")
+	for _, node := range pq {
+		fmt.Print(node.id, " ")
+	}
+	fmt.Println("]")
 }

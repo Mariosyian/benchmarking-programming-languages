@@ -11,7 +11,7 @@ import "fmt"
 type Edge struct {
 	weight int
 	source *Node
-	target   *Node
+	target *Node
 }
 
 func CreateEdge(source Node, target Node, weight int) *Edge {
