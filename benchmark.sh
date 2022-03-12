@@ -73,8 +73,7 @@ INTERVAL=1
 # Capture any CL flags provided
 TEST=0
 BENCHMARK=1
-while test $# -gt 0
-do
+while test $# -gt 0; do
   case "$1" in
     -h|--help)
         echo "The Computer Language Benchmarks Game"
@@ -129,11 +128,9 @@ function get_cpu_name() {
     CPU_MODEL=$(cat /proc/cpuinfo | grep 'model name' | head -n 1 | awk '{for (i=4;i<=NF;i++) printf "%s ", $i}')
     CPU_BRAND=$(echo $CPU_MODEL | awk '{print $1}')
 
-    if [ $CPU_BRAND == "AMD" ]
-    then
+    if [ $CPU_BRAND == "AMD" ]; then
         echo $CPU_MODEL | awk '{printf "%s %s %s %s\n", $1, $2, $3, $4}'
-    elif [ $CPU_BRAND == "Intel(R)" ]
-    then
+    elif [ $CPU_BRAND == "Intel(R)" ]; then
         echo $CPU_MODEL | awk '{printf "%s %s %s %s %s\n", $1, $2, $3, $4, $5}'
     else
         echo $CPU_MODEL
@@ -190,7 +187,7 @@ function time_taken() {
     IFS=$'\n'
 
     TEMP_FILE="tmp_bench"
-    
+
     # Get the command output and cut the top line (header line)
     { python $SYRUPY -S -C --no-raw-process-log "$@" 2> /dev/null; } | sed 1d > $TEMP_FILE
 
@@ -218,8 +215,7 @@ function time_taken() {
 
     # Calculate the average of each measurement
     NUM_OF_LINES=$(wc -l $TEMP_FILE | awk '{print $1}')
-    if [ $NUM_OF_LINES -ne 0 ]
-    then
+    if [ $NUM_OF_LINES -ne 0 ]; then
         AVERAGE_CPU=$(($AVERAGE_CPU / $NUM_OF_LINES))
         AVERAGE_RSS=$(($AVERAGE_RSS / $NUM_OF_LINES))
         AVERAGE_VMS=$(($AVERAGE_VMS / $NUM_OF_LINES))
@@ -271,25 +267,21 @@ for language in "${LANGUAGES[@]}"; do
             "rust")
                 rustc "${algorithm}_run.rs" -o "${algorithm}_run"
                 COMMAND="./${algorithm}_run"
-                if [ $TEST -eq 1 ]
-                then
+                if [ $TEST -eq 1 ]; then
                     echo "> Running Rust tests for $algorithm"
                     rustc --test "${algorithm}_test.rs" -o "${algorithm}_test"
                     ./${algorithm}_test
-                    if [ $(echo $?) -ne 0 ]
-                    then
+                    if [ $(echo $?) -ne 0 ]; then
                         exit 1
                     fi
                 fi
                 ;;
             "go")
                 COMMAND="go run ."
-                if [ $TEST -eq 1 ]
-                then
+                if [ $TEST -eq 1 ]; then
                     echo "> Running Go tests for $algorithm"
                     go test "${algorithm}_test.go"
-                    if [ $(echo $?) -ne 0 ]
-                    then
+                    if [ $(echo $?) -ne 0 ]; then
                         exit 1
                     fi
                 fi
@@ -297,12 +289,10 @@ for language in "${LANGUAGES[@]}"; do
             "java")
                 javac -cp .:$JUNIT:$HAMCREST *.java
                 COMMAND="java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_run"
-                if [ $TEST -eq 1 ]
-                then
+                if [ $TEST -eq 1 ]; then
                     echo "> Running Java tests for $algorithm"
                     java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_test
-                    if [ $(echo $?) -ne 0 ]
-                    then
+                    if [ $(echo $?) -ne 0 ]; then
                         exit 1
                     fi
                 fi
@@ -311,34 +301,29 @@ for language in "${LANGUAGES[@]}"; do
                 gcc -Wall -c "${algorithm}.c" "${algorithm}_run.c"
                 gcc -o "${algorithm}_run" "${algorithm}.o" "${algorithm}_run.o"
                 COMMAND="./${algorithm}_run"
-                if [ $TEST -eq 1 ]
-                then
+                if [ $TEST -eq 1 ]; then
                     echo "> Running C tests for $algorithm"
                     gcc -Wall -c "${algorithm}.c" "${algorithm}_test.c" $UNITY
                     gcc -o "${algorithm}_test" "${algorithm}.o" "${algorithm}_test.o" "unity.o"
                     ./${algorithm}_test
-                    if [ $(echo $?) -ne 0 ]
-                    then
+                    if [ $(echo $?) -ne 0 ]; then
                         exit 1
                     fi
                 fi
                 ;;
             "python")
                 COMMAND="python ${algorithm}_run.py"
-                if [ $TEST -eq 1 ]
-                then
+                if [ $TEST -eq 1 ]; then
                     echo "> Running Python tests for $algorithm"
                     pytest .
-                    if [ $(echo $?) -ne 0 ]
-                    then
+                    if [ $(echo $?) -ne 0 ]; then
                         exit 1
                     fi
                 fi
                 ;;
         esac
 
-        if [ $BENCHMARK -eq 1 ]
-        then
+        if [ $BENCHMARK -eq 1 ]; then
             echo -ne "[${language}/${algorithm}]\t..."
             TIME_TAKEN=$(time_taken ${COMMAND})
             echo "${TIME_TAKEN}s"
@@ -349,25 +334,32 @@ for language in "${LANGUAGES[@]}"; do
 done
 cd $PROGRAMS_DIR
 
-if [ $BENCHMARK -eq 1 ]
-then
-    cat $BENCHMARKS_FILE | column -t -s "|" | tee $BENCHMARKS_FILE > /dev/null
-    echo "Results written to $BENCHMARKS_FILE"
+if [ $BENCHMARK -eq 1 ]; then
+    BENCHMARKS_FILE_B="${BENCHMARKS_FILE}_B"
+    cat $BENCHMARKS_FILE | column -t -s "|" > ${BENCHMARKS_FILE_B}
 
     # Host machine information
     AVG_SCORE=0
-    SCORES="$(cat $BENCHMARKS_FILE | sed 1d | awk '{print $7}')"
+    SCORES=$(cat $BENCHMARKS_FILE_B | sed 1d | awk '{print $7}')
     readarray -d ' ' -t SCORES <<< $SCORES
     COUNTER=0
     for score in $SCORES; do
         AVG_SCORE=$(($AVG_SCORE + $score))
         COUNTER=$(($COUNTER + 1))
     done
-    AVG_SCORE=$(($AVG_SCORE / $COUNTER))
+    if [ $COUNTER -eq 0 ]; then
+        AVG_SCORE=0
+    else
+        AVG_SCORE=$(($AVG_SCORE / $COUNTER))
+    fi
 
-    echo -e "" >> $BENCHMARKS_FILE
-    echo -e "CPU: \t\t$(get_cpu_name)" >> $BENCHMARKS_FILE
-    echo -e "Processors: \t$(get_num_of_cores) Cores / $(get_num_of_processors) Threads" >> $BENCHMARKS_FILE
-    echo -e "Memory: \t~$(get_ram_in_gb) GB" >> $BENCHMARKS_FILE
-    echo -e "Average Score: \t$AVG_SCORE" >> $BENCHMARKS_FILE
+    echo -e "" >> $BENCHMARKS_FILE_B
+    echo -e "CPU: \t\t$(get_cpu_name)" >> $BENCHMARKS_FILE_B
+    echo -e "Processors: \t$(get_num_of_cores) Cores / $(get_num_of_processors) Threads" >> $BENCHMARKS_FILE_B
+    echo -e "Memory: \t~$(get_ram_in_gb) GB" >> $BENCHMARKS_FILE_B
+    echo -e "Average Score: \t$AVG_SCORE" >> $BENCHMARKS_FILE_B
+
+    mv $BENCHMARKS_FILE_B $BENCHMARKS_FILE
+
+    echo "Results written to $BENCHMARKS_FILE"
 fi
