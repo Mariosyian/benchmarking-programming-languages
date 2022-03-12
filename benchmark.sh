@@ -258,10 +258,17 @@ function time_taken() {
 cat /dev/null > $BENCHMARKS_FILE
 echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)|Score" >> $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
-    cd $PROGRAMS_DIR/$language
-
+    if [ test -d $PROGRAMS_DIR/$language ]; then
+        cd $PROGRAMS_DIR/$language
+    else
+        continue
+    fi
     for algorithm in "${ALGORITHMS}"; do
-        cd $algorithm
+        if [ test -d $algorithm ]; then
+            cd $algorithm
+        else
+            continue
+        fi
 
         case $language in
             "rust")
@@ -324,12 +331,10 @@ for language in "${LANGUAGES[@]}"; do
             "haxe")
                 HAXE_ALGORITHM=($algorithm)
                 COMMAND="haxe --main ${HAXE_ALGORITHM[*]^}_Run.hx"
-                if [ $TEST -eq 1 ]
-                then
+                if [ $TEST -eq 1 ]; then
                     echo "> Running Haxe tests for $algorithm"
                     haxe --main "${HAXE_ALGORITHM[*]^}_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
-                    if [ $(echo $?) -ne 0 ]
-                    then
+                    if [ $(echo $?) -ne 0 ]; then
                         exit 1
                     fi
                 fi
