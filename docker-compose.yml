@@ -1,11 +1,10 @@
 version: "3"
 
 services:
-  # Includes GCC and Python3
   pre-requisites:
     build:
       context: .
-      dockerfile: "./docker/dockerfiles/pre-requisites/Dockerfile"
+      dockerfile: "./Dockerfile"
     networks:
       - main
     volumes:

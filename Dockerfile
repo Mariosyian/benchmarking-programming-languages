@@ -48,4 +48,4 @@ COPY . /home/benchmarking-programming-languages
 
 RUN pip install -r /home/benchmarking-programming-languages/requirements_dev.txt
 
-CMD [ "/home/benchmarking-programming-languages/benchmark.sh -v" ]
+CMD [ "/home/benchmarking-programming-languages/benchmark.sh", "-v" ]
