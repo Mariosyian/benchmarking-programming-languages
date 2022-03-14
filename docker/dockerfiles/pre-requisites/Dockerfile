@@ -1,5 +1,9 @@
 FROM ubuntu:20.04
 
+# Required for Debian interaction
+# (https://stackoverflow.com/questions/62299928/r-installation-in-docker-gets-stuck-in-geographic-area)
+ENV DEBIAN_FRONTEND noninteractive
+
 WORKDIR /home/benchmarking-programming-languages
 
 # Install pre-requisites
@@ -20,7 +24,7 @@ WORKDIR /home/benchmarking-programming-languages
 RUN rm -rf util-linux-2.35-rc1*
 
 RUN apt install python3 pip -y
-# RUN apt install default-jdk-headless -y # Has prompts ...
+RUN apt install default-jdk-headless -y
 RUN apt install rustc -y
 
 # Install Haxe and Haxelib
