@@ -258,13 +258,13 @@ function time_taken() {
 cat /dev/null > $BENCHMARKS_FILE
 echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)|Score" >> $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
-    if [ test -d $PROGRAMS_DIR/$language ]; then
+    if [ -d $PROGRAMS_DIR/$language ]; then
         cd $PROGRAMS_DIR/$language
     else
         continue
     fi
     for algorithm in "${ALGORITHMS}"; do
-        if [ test -d $algorithm ]; then
+        if [ -d $algorithm ]; then
             cd $algorithm
         else
             continue
@@ -284,7 +284,8 @@ for language in "${LANGUAGES[@]}"; do
                 fi
                 ;;
             "go")
-                COMMAND="go run ."
+                go build -o "${algorithm}_run" .
+                COMMAND="./${algorithm}_run"
                 if [ $TEST -eq 1 ]; then
                     echo "> Running Go tests for $algorithm"
                     go test "${algorithm}_test.go"
