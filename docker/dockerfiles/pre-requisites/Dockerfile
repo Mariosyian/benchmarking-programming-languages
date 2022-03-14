@@ -22,11 +22,16 @@ RUN rm -rf util-linux-2.35-rc1*
 RUN apt install python3 pip -y
 # RUN apt install default-jdk-headless -y # Has prompts ...
 RUN apt install rustc -y
-Run apt install haxe haxelib -y
-# Instal GoLang
-RUN add-apt-repository ppa:longsleep/golang-backports
-RUN apt update
-RUN apt install golang-go
+
+# Install Haxe and Haxelib
+RUN wget https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
+RUN tar xfz haxe-4.2.5-linux64.tar.gz
+RUN ln -s /home/benchmarking-programming-languages/haxe_20220306074705_e5eec31/haxe /usr/bin/haxe
+RUN ln -s /home/benchmarking-programming-languages/haxe_20220306074705_e5eec31/haxelib /usr/bin/haxelib
+# # Install Neko (Haxe VM)
+# RUN add-apt-repository ppa:haxe/snapshots -y
+# RUN apt update
+# RUN apt install neko -y
 
 RUN if ! test -d /home/benchmarking-programming-languages; then mkdir /home/benchmarking-programming-languages && echo "Created directory /home/benchmarking-programming-languages."; fi
 COPY . /home/benchmarking-programming-languages
