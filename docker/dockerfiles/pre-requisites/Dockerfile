@@ -28,6 +28,11 @@ RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN apt install default-jdk-headless -y
 RUN apt install rustc -y
 
+# Install GoLang
+RUN wget https://go.dev/dl/go1.17.8.linux-amd64.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.8.linux-amd64.tar.gz
+ENV PATH="/usr/local/go/bin:${PATH}"
+
 # Install Haxe and Haxelib
 RUN wget https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
 RUN tar xfz haxe-4.2.5-linux64.tar.gz
@@ -43,4 +48,4 @@ COPY . /home/benchmarking-programming-languages
 
 RUN pip install -r /home/benchmarking-programming-languages/requirements_dev.txt
 
-CMD [ "/home/benchmarking-programming-languages/benchmark.sh" ]
+CMD [ "/home/benchmarking-programming-languages/benchmark.sh -v" ]
