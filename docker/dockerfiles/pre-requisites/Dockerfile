@@ -24,6 +24,7 @@ WORKDIR /home/benchmarking-programming-languages
 RUN rm -rf util-linux-2.35-rc1*
 
 RUN apt install python3 pip -y
+RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN apt install default-jdk-headless -y
 RUN apt install rustc -y
 
