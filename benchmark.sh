@@ -73,6 +73,7 @@ INTERVAL=1
 # Capture any CL flags provided
 TEST=0
 BENCHMARK=1
+DISPLAY=0
 while test $# -gt 0; do
   case "$1" in
     -h|--help)
@@ -89,6 +90,7 @@ while test $# -gt 0; do
         echo "-h, --help            show this help message and exit"
         echo "-t, --test            run tests for all algorithms without running the benchmark"
         echo "--test-and-benchmark  run tests and benchmarks for all algorithms (breaks if any tests fail)"
+        echo "-v, --display         display the benchmark report after completion"
         exit 0
         ;;
     -t|--test)
@@ -101,6 +103,11 @@ while test $# -gt 0; do
         shift
         TEST=1
         BENCHMARK=1
+        shift
+        ;;
+    -v|--display)
+        shift
+        DISPLAY=1
         shift
         ;;
   esac
@@ -258,10 +265,17 @@ function time_taken() {
 cat /dev/null > $BENCHMARKS_FILE
 echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)|Score" >> $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
-    cd $PROGRAMS_DIR/$language
-
+    if [ -d $PROGRAMS_DIR/$language ]; then
+        cd $PROGRAMS_DIR/$language
+    else
+        continue
+    fi
     for algorithm in "${ALGORITHMS}"; do
-        cd $algorithm
+        if [ -d $algorithm ]; then
+            cd $algorithm
+        else
+            continue
+        fi
 
         case $language in
             "rust")
@@ -277,7 +291,8 @@ for language in "${LANGUAGES[@]}"; do
                 fi
                 ;;
             "go")
-                COMMAND="go run ."
+                go build -o "${algorithm}_run" .
+                COMMAND="./${algorithm}_run"
                 if [ $TEST -eq 1 ]; then
                     echo "> Running Go tests for $algorithm"
                     go test "${algorithm}_test.go"
@@ -324,12 +339,10 @@ for language in "${LANGUAGES[@]}"; do
             "haxe")
                 HAXE_ALGORITHM=($algorithm)
                 COMMAND="haxe --main ${HAXE_ALGORITHM[*]^}_Run.hx"
-                if [ $TEST -eq 1 ]
-                then
+                if [ $TEST -eq 1 ]; then
                     echo "> Running Haxe tests for $algorithm"
                     haxe --main "${HAXE_ALGORITHM[*]^}_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
-                    if [ $(echo $?) -ne 0 ]
-                    then
+                    if [ $(echo $?) -ne 0 ]; then
                         exit 1
                     fi
                 fi
@@ -375,4 +388,9 @@ if [ $BENCHMARK -eq 1 ]; then
     mv $BENCHMARKS_FILE_B $BENCHMARKS_FILE
 
     echo "Results written to $BENCHMARKS_FILE"
+fi
+
+if [ $DISPLAY -eq 1 ]; then
+    echo "                         -----------------------------------"
+    cat $BENCHMARKS_FILE
 fi
