@@ -23,6 +23,10 @@ RUN apt install python3 pip -y
 # RUN apt install default-jdk-headless -y # Has prompts ...
 RUN apt install rustc -y
 Run apt install haxe haxelib -y
+# Instal GoLang
+RUN add-apt-repository ppa:longsleep/golang-backports
+RUN apt update
+RUN apt install golang-go
 
 RUN if ! test -d /home/benchmarking-programming-languages; then mkdir /home/benchmarking-programming-languages && echo "Created directory /home/benchmarking-programming-languages."; fi
 COPY . /home/benchmarking-programming-languages
