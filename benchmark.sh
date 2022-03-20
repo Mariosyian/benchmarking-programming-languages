@@ -53,6 +53,11 @@
 #   recognise, and run it:
 #   - Include your language in the LANGUAGES list / algorithm in the ALGORITHMS list.
 #   - Update the EXTENSIONS list with a key:value pair of the language:file extension
+#
+# Exit values:
+#   0 - OK
+#   1 - Test failure
+#   2 - Erroneous input
 
 CURRENT_DIR=$(pwd)
 PROGRAMS_DIR="${CURRENT_DIR}/implementations"
@@ -71,11 +76,17 @@ ALGORITHMS=(sieve)
 INTERVAL=1
 
 # Capture any CL flags provided
-TEST=0
 BENCHMARK=1
 DISPLAY=0
+RUNS=10
+TEST=0
+VERBOSE=0
 while test $# -gt 0; do
   case "$1" in
+    -d|--display)
+        shift
+        DISPLAY=1
+        ;;
     -h|--help)
         echo "The Computer Language Benchmarks Game"
         echo "Author: Marios Yiannakou"
@@ -84,32 +95,42 @@ while test $# -gt 0; do
         echo "written in the implementations directory. The script compiles and runs"
         echo "all language implementations of one algorithm, before moving to the next."
         echo ""
-        echo "Usage: ./benchmarks.sh [-h|--help] [-t|--test] [--test-and-benchmark]"
+        echo "Usage: ./benchmarks.sh [-d|--display-report] [-h|--help] [-r 10|--runs 10]"
+        echo "                       [-t|--test] [-v|--verbose] [--test-and-benchmark]"
         echo ""
         echo "Options:"
+        echo "-d, --display-report  display the benchmark report after completion"
         echo "-h, --help            show this help message and exit"
-        echo "-t, --test            run tests for all algorithms without running the benchmark"
-        echo "--test-and-benchmark  run tests and benchmarks for all algorithms (breaks if any tests fail)"
-        echo "-v, --display         display the benchmark report after completion"
+        echo "-r, --runs            the amount of times to run each algorithm. Defaults to 10"
+        echo "-t, --test            run tests for all algorithms without benchmarking (exits if any tests fail)"
+        echo "-v, --verbose         save the report for each run of each algorithm instead of their final average"
+        echo "--test-and-benchmark  run tests and benchmarks for all algorithms (exits if any tests fail)"
         exit 0
+        ;;
+    -r|--runs)
+        shift
+        # TODO: Until a regex can be matched in the case statement
+        #       trust that the user will not give erroneous input.
+        RUNS=$1
+        shift
         ;;
     -t|--test)
         shift
         TEST=1
         BENCHMARK=0
+        ;;
+    -v|--verbose)
         shift
+        VERBOSE=1
         ;;
     --test-and-benchmark)
         shift
         TEST=1
         BENCHMARK=1
-        shift
         ;;
-    -v|--display)
-        shift
-        DISPLAY=1
-        shift
-        ;;
+    *)
+        echo "Invalid option. Run 'benchmark.sh --help' for usage help"
+        exit 2
   esac
 done
 
@@ -180,13 +201,20 @@ function get_ram_in_gb() {
 }
 
 # Calculates the processes elapsed time (s), CPU usage (%), the RSS (KB), and VMS (KB)
-# using the `syrupy` script. The function then writes the results to the benchmarks
-# file.
+# using the `syrupy` script.
 #
 # Parameters:
 #   - The command to be run.
 # Returns:
-#   The elapsed time between the execution of the given command and the time it finished.
+#   A space delimeted string containing:
+#       - The elapsed time between the execution of the given command and the time it finished.
+#       - The average CPU usage of the given command.
+#       - The average RSS memory usage of the given command.
+#       - The average VMS memory usage of the given command.
+#       - The time score of the given command.
+#       - The CPU score of the given command.
+#       - The RSS score of the given command.
+#       - The VMS score of the given command.
 function time_taken() {
     # Set the internal field separator to the new line character
     # By default a bash for loop splits a line by whitespace
@@ -197,59 +225,74 @@ function time_taken() {
 
     # Get the command output and cut the top line (header line)
     { python $SYRUPY -S -C --no-raw-process-log "$@" 2> /dev/null; } | sed 1d > $TEMP_FILE
+    # TODO: New benchmark tool `/usr/bin/time`
+    # /usr/bin/time -f "Unshared:%D\nElapsed real time (s):%e\nAvg Total Mem: %K\nMax RSS: %M\nAvg RSS: %t\nCPU%%: %P\nCPU sec (sys):%S\nCPU sec (usr):%U"
+    # Unshared:0, Elapsed real time (s):171.79, Avg Total Mem: 0, Max RSS: 183932, Avg RSS: 0, CPU%: 46%, CPU sec (sys):2.86, CPU sec (usr):77.24
 
     LAST_LINE=$(tail $TEMP_FILE -n 1)
     ELAPSED_TIME=$(echo $LAST_LINE | awk '{print $4}')
     readarray -d ":" -t ELAPSED_TIME_ARR <<< $ELAPSED_TIME
     ELAPSED_TIME=$((${ELAPSED_TIME_ARR[0]} * 60 + ${ELAPSED_TIME_ARR[1]}))
-    AVERAGE_CPU=$(float_to_int $(echo $LAST_LINE | awk '{print $5}'))
-    AVERAGE_RSS=$(echo $LAST_LINE | awk '{print $7}')
-    AVERAGE_VMS=$(echo $LAST_LINE | awk '{print $8}')
+    LOCAL_AVERAGE_CPU=$(float_to_int $(echo $LAST_LINE | awk '{print $5}'))
+    LOCAL_AVERAGE_RSS=$(echo $LAST_LINE | awk '{print $7}')
+    LOCAL_AVERAGE_VMS=$(echo $LAST_LINE | awk '{print $8}')
 
     # Cut the last line from the file as it is only used for the total elapsed time
     # of the process under investigation.
     # Accumulate the sum of all readings for each measurement
     for line in $(cat $TEMP_FILE | sed \$d); do
         CURRENT_CPU=$(float_to_int $(echo $line | awk '{print $5}'))
-        AVERAGE_CPU=$(($AVERAGE_CPU + $CURRENT_CPU))
+        LOCAL_AVERAGE_CPU=$(($LOCAL_AVERAGE_CPU + $CURRENT_CPU))
 
         CURRENT_RSS=$(echo $line | awk '{print $7}')
-        AVERAGE_RSS=$(($AVERAGE_RSS + $CURRENT_RSS))
+        LOCAL_AVERAGE_RSS=$(($LOCAL_AVERAGE_RSS + $CURRENT_RSS))
 
         CURRENT_VMS=$(echo $line | awk '{print $8}')
-        AVERAGE_VMS=$(($AVERAGE_VMS + $CURRENT_VMS))
+        LOCAL_AVERAGE_VMS=$(($LOCAL_AVERAGE_VMS + $CURRENT_VMS))
     done
 
     # Calculate the average of each measurement
     NUM_OF_LINES=$(wc -l $TEMP_FILE | awk '{print $1}')
     if [ $NUM_OF_LINES -ne 0 ]; then
-        AVERAGE_CPU=$(($AVERAGE_CPU / $NUM_OF_LINES))
-        AVERAGE_RSS=$(($AVERAGE_RSS / $NUM_OF_LINES))
-        AVERAGE_VMS=$(($AVERAGE_VMS / $NUM_OF_LINES))
+        LOCAL_AVERAGE_CPU=$(($LOCAL_AVERAGE_CPU / $NUM_OF_LINES))
+        LOCAL_AVERAGE_RSS=$(($LOCAL_AVERAGE_RSS / $NUM_OF_LINES))
+        LOCAL_AVERAGE_VMS=$(($LOCAL_AVERAGE_VMS / $NUM_OF_LINES))
+    fi
+
+    # Safeguard against fractions rounded to 0.
+    if [ $LOCAL_AVERAGE_CPU -le 1 ]; then
+        LOCAL_AVERAGE_CPU=1
+    fi
+    if [ $LOCAL_AVERAGE_RSS -le 1 ]; then
+        LOCAL_AVERAGE_RSS=1
+    fi
+    if [ $LOCAL_AVERAGE_VMS -le 1 ]; then
+        LOCAL_AVERAGE_VMS=1
     fi
 
     # Calculate the score
     # The score is out of 100 with a weighted distribution on each of the four measured
     # properties as follows:
-    # - Time contributes to 40% (lower is better)
+    # - Time contributes to 50% (lower is better)
     #   - 100% = 1 second
     #   - 0% = 10 seconds+ TODO: Review again after more algorithms are introduced
     # - Average CPU utilisation contributes to 30% (lower is better)
     #   - 100% = 1%
     #   - 5% = 100%
-    # - Average RSS contributes to 15% (lower is better)
+    # - Average RSS contributes to 10% (lower is better)
     #   - 100% = <=3000 ?? Based on algorithm ??
     #   - 0% = >=10,000
-    # - Average VMS contributes to 15% (lower is better)
+    # - Average VMS contributes to 10% (lower is better)
     #   - 100% = <=6000 ?? Based on algorithm ??
     #   - 0% = >=100,000
-    TIME_SCORE=$(((10 / $ELAPSED_TIME) * 40))
-    CPU_SCORE=$(((100 / $AVERAGE_CPU) * 30))
-    RSS_SCORE=$(((3000 / $AVERAGE_RSS) * 15))
-    VMS_SCORE=$(((3000 / $AVERAGE_VMS) * 15))
+    TIME_SCORE=$(((10 / $ELAPSED_TIME) * 50))
+    CPU_SCORE=$(((100 / $LOCAL_AVERAGE_CPU) * 30))
+    RSS_SCORE=$(((3000 / $LOCAL_AVERAGE_RSS) * 10))
+    VMS_SCORE=$(((6000 / $LOCAL_AVERAGE_VMS) * 10))
 
-    # Print the results into the benchmark file
-    echo -e "${language}|${algorithm}|${ELAPSED_TIME}|${AVERAGE_CPU}|${AVERAGE_RSS}|${AVERAGE_VMS}|$(($TIME_SCORE + $CPU_SCORE + $RSS_SCORE + $VMS_SCORE))" >> $BENCHMARKS_FILE
+    GLOBAL_AVERAGE_CPU=$(($GLOBAL_AVERAGE_CPU + $LOCAL_AVERAGE_CPU))
+    GLOBAL_AVERAGE_RSS=$(($GLOBAL_AVERAGE_RSS + $LOCAL_AVERAGE_RSS))
+    GLOBAL_AVERAGE_VMS=$(($GLOBAL_AVERAGE_VMS + $LOCAL_AVERAGE_VMS))
 
     # Cleanup
     # - Delete temporary file(s)
@@ -257,13 +300,41 @@ function time_taken() {
     rm $TEMP_FILE
     IFS=$OG_IFS
 
-    echo $ELAPSED_TIME
+    echo "$ELAPSED_TIME $GLOBAL_AVERAGE_CPU $GLOBAL_AVERAGE_RSS $GLOBAL_AVERAGE_VMS $(($TIME_SCORE + $CPU_SCORE + $RSS_SCORE + $VMS_SCORE))"
+}
+
+# Updates the global variables required to calculate the score of a language.
+#
+# Parameters:
+#   - The list of global variable values to update in the order:
+#     TIME_TAKEN, GLOBAL_AVERAGE_CPU, GLOBAL_AVERAGE_RSS, GLOBAL_AVERAGE_VMS, SCORE
+# Returns:
+#   N/A
+function update_globals() {
+    TIME_TAKEN=$(($TIME_TAKEN + $1))
+    GLOBAL_AVERAGE_CPU=$(($GLOBAL_AVERAGE_CPU + $2))
+    GLOBAL_AVERAGE_RSS=$(($GLOBAL_AVERAGE_RSS + $3))
+    GLOBAL_AVERAGE_VMS=$(($GLOBAL_AVERAGE_VMS + $4))
+    SCORE=$(($SCORE + $5))
+}
+
+# Resets the global variables required to calculate the score of a language.
+#
+# Parameters:
+#   N/A
+# Returns:
+#   N/A
+function reset_globals() {
+    GLOBAL_AVERAGE_CPU=0
+    GLOBAL_AVERAGE_RSS=0
+    GLOBAL_AVERAGE_VMS=0
+    SCORE=0
 }
 
 # TODO: Add --clean flag to cleanup compiled files
 # FILES_TO_CLEANUP = ()
 cat /dev/null > $BENCHMARKS_FILE
-echo -e "LANGUAGE|ALGORITHM|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)|Score" >> $BENCHMARKS_FILE
+echo -e "LANGUAGE|ALGORITHM|RUN|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)|SCORE" >> $BENCHMARKS_FILE
 for language in "${LANGUAGES[@]}"; do
     if [ -d $PROGRAMS_DIR/$language ]; then
         cd $PROGRAMS_DIR/$language
@@ -313,6 +384,7 @@ for language in "${LANGUAGES[@]}"; do
                 fi
                 ;;
             "c")
+                # TODO: Try to implement both the normal executable and the -O2 optimisation
                 gcc -Wall -c "${algorithm}.c" "${algorithm}_run.c"
                 gcc -o "${algorithm}_run" "${algorithm}.o" "${algorithm}_run.o"
                 COMMAND="./${algorithm}_run"
@@ -337,11 +409,10 @@ for language in "${LANGUAGES[@]}"; do
                 fi
                 ;;
             "haxe")
-                HAXE_ALGORITHM=($algorithm)
-                COMMAND="haxe --main ${HAXE_ALGORITHM[*]^}_Run.hx"
+                COMMAND="haxe --main ${algorithm^}_Run.hx --interp"
                 if [ $TEST -eq 1 ]; then
                     echo "> Running Haxe tests for $algorithm"
-                    haxe --main "${HAXE_ALGORITHM[*]^}_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
+                    haxe --main "${algorithm^}_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
                     if [ $(echo $?) -ne 0 ]; then
                         exit 1
                     fi
@@ -350,9 +421,22 @@ for language in "${LANGUAGES[@]}"; do
         esac
 
         if [ $BENCHMARK -eq 1 ]; then
-            echo -ne "[${language}/${algorithm}]\t..."
-            TIME_TAKEN=$(time_taken ${COMMAND})
-            echo "${TIME_TAKEN}s"
+            reset_globals
+            for count in $(eval echo {1..$RUNS}); do
+                echo -ne "[${language}/${algorithm}-$(seq -f "%0${#RUNS}g" $count $count)]\t...\r"
+                # https://stackoverflow.com/questions/23564995/how-to-modify-a-global-variable-within-a-function-in-bash
+                readarray -d " " -t TIME_FNC <<< $(time_taken ${COMMAND})
+                update_globals ${TIME_FNC[@]}
+                if [ $VERBOSE -eq 1 ]; then
+                    echo -e "${language}|${algorithm}|$(seq -f "%0${#RUNS}g" $count $count)|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                    reset_globals
+                fi
+            done
+            echo -e "[${language}/${algorithm}-$(seq -f "%0${#RUNS}g" ${RUNS} ${RUNS})]\t...${TIME_TAKEN}s"
+            if [ $VERBOSE -eq 0 ]; then
+                echo -e "${language}|${algorithm}|${RUNS}|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+            fi
+            TIME_TAKEN=0
         fi
         cd ..
         sleep $INTERVAL
@@ -364,33 +448,33 @@ if [ $BENCHMARK -eq 1 ]; then
     BENCHMARKS_FILE_B="${BENCHMARKS_FILE}_B"
     cat $BENCHMARKS_FILE | column -t -s "|" > ${BENCHMARKS_FILE_B}
 
-    # Host machine information
-    AVG_SCORE=0
-    SCORES=$(cat $BENCHMARKS_FILE_B | sed 1d | awk '{print $7}')
+    AVERAGE_SCORE=0
+    SCORES=$(cat $BENCHMARKS_FILE_B | sed 1d | awk '{print $8}')
     readarray -d ' ' -t SCORES <<< $SCORES
     COUNTER=0
     for score in $SCORES; do
-        AVG_SCORE=$(($AVG_SCORE + $score))
+        AVERAGE_SCORE=$(($AVERAGE_SCORE + $score))
         COUNTER=$(($COUNTER + 1))
     done
     if [ $COUNTER -eq 0 ]; then
-        AVG_SCORE=0
+        AVERAGE_SCORE=0
     else
-        AVG_SCORE=$(($AVG_SCORE / $COUNTER))
+        AVERAGE_SCORE=$(($AVERAGE_SCORE / $COUNTER))
     fi
 
+    # Host machine information
     echo -e "" >> $BENCHMARKS_FILE_B
-    echo -e "CPU: \t\t$(get_cpu_name)" >> $BENCHMARKS_FILE_B
-    echo -e "Processors: \t$(get_num_of_cores) Cores / $(get_num_of_processors) Threads" >> $BENCHMARKS_FILE_B
-    echo -e "Memory: \t~$(get_ram_in_gb) GB" >> $BENCHMARKS_FILE_B
-    echo -e "Average Score: \t$AVG_SCORE" >> $BENCHMARKS_FILE_B
+    echo -e "CPU:            $(get_cpu_name)" >> $BENCHMARKS_FILE_B
+    echo -e "Processors:     $(get_num_of_cores) Cores / $(get_num_of_processors) Threads" >> $BENCHMARKS_FILE_B
+    echo -e "Memory:         ~$(get_ram_in_gb) GB" >> $BENCHMARKS_FILE_B
+    echo -e "Average Score:  $AVERAGE_SCORE" >> $BENCHMARKS_FILE_B
 
     mv $BENCHMARKS_FILE_B $BENCHMARKS_FILE
 
     echo "Results written to $BENCHMARKS_FILE"
 fi
 
-if [ $DISPLAY -eq 1 ]; then
+if [ $DISPLAY -eq 1 ] && [ $BENCHMARK -eq 1 ]; then
     echo "                         -----------------------------------"
     cat $BENCHMARKS_FILE
 fi
