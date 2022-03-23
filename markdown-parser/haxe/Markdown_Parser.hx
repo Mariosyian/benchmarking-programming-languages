@@ -5,14 +5,14 @@
  *
  * @author Marios Yiannakou
  */
-class MarkdownParser {
+class Markdown_Parser {
     
     // Used to keep track of multiline blocks e.g. paragraph
-    var previousLine: String = null;
+    var previousLine: String = "";
     // Stack to keep track of the HTML elements opened.
-    var htmlElements = null;
+    var htmlElements: Array<String> = [];
     // The string to contain all the parsed HTML.
-    var rawHtml: String = null;
+    var rawHtml: String = "";
     // Boolean flag to denote if this is the start of a blockquote.
     var blockquoteItem: Bool = false;
     // Boolean flag to denote if this is the start of an unordered list.
@@ -24,31 +24,23 @@ class MarkdownParser {
      * Parse a markdown document or string into its HTML equivalent.
      * 
      * @param content The path of the file, or a string, to be parsed. Works in
-     *      conjunction with the `string` boolean flag.
-     * @param string Boolean flag to specify whether a user has passed a filename
-     *      or a string.
+     *  conjunction with the `string` boolean flag.
+     * @param string Boolean flag to specify whether a user has passed a string or a
+     *  filename. Set to `true` to indicate a raw markdown string, and `false` to
+     *  indicate a filename.
      * @param prettify Boolean flag to specify whether the HTML output should be
-     *      formatted using BeautifulSoup.
+     *  formatted using BeautifulSoup.
      * @param stdout Boolean flag to specify whether the HTML output should be
-     *      displayed to standard out instead of being written to a file.
+     *  displayed to standard out instead of being written to a file.
      */    
-    function new(
-        content: String = null,
-        string: Bool = false,
-        prettify: Bool = false,
-        stdout: Bool = false,
-    ) {
-        if (content == null || content.strip() == "") && string == null {
-            trace("No file was provided.");
-            Sys.exit(1);
-        }
-        else if (content == null || content.strip() == "") && string != null {
-            trace("No markdown string was provided.");
+    function new(content: String = "", string: Bool = false, prettify: Bool = false, stdout: Bool = false) {
+        if (StringTools.trim(content) == "" && !string) {
+            Sys.println("No file was provided.");
             Sys.exit(1);
         }
 
-        if string == null && sys.io.File.exists(content) {
-            trace("The file provided was not found.");
+        if (!string && !sys.FileSystem.exists(content)) {
+            Sys.println("The file provided was not found.");
             Sys.exit(1);
         }
 
@@ -76,16 +68,13 @@ class MarkdownParser {
         content: String, string: Bool, prettify: Bool = false, stdout: Bool = false
     ) {
         if (!string) {
-            var htmlCode: String = sys.io.File.getContent(content);
-            for (line in htmlCode.split("\n")) {
-                parseContent(line);
-            }
+            parseContent(sys.io.File.getContent(content));
         } else {
             parseContent(content);
         }
         rawHtml += '\n</body>\n</html>\n';
 
-        parsed_content_filename = "parsed.html";
+        var parsedContentFilename: String = "parsed.html";
         try {
             // FIX
             // if (prettify) {
@@ -93,18 +82,18 @@ class MarkdownParser {
             // }
 
             if (stdout) {
-                trace(rawHtml);
+                Sys.println(rawHtml);
             } else {
                 sys.io.File.saveContent(parsedContentFilename, rawHtml);
             }
-        } catch(e) {
-            trace(
-                'Exception ${str(e)} occured while writing to file ... printing to standard out'
+        } catch(e:Any) {
+            Sys.println(
+                'Exception [${e}] occured while writing to file ... printing to standard out'
             );
-            trace(rawHtml);
+            Sys.println(rawHtml);
             // FIX: Delete the file if it exists
-            // if (sys.io.File.exists((parsed_content_filename)) {
-            //     remove(parsed_content_filename);
+            // if (Sys.FileSystem.exists((parsedContentFilename)) {
+            //     remove(parsedContentFilename);
             // }
         }
     }
@@ -113,11 +102,10 @@ class MarkdownParser {
      * Reads and parses the provided content into HTML.
      * 
      * @param content A string to be parsed with markdown rules.
-     * @returns The parsed content as HTML.
      */
     function parseContent(content: String) {
         for (line in content.split("\n")) {
-            line = line.strip();
+            line = StringTools.trim(line);
             if (line == "") {
                 if (unorderedListItem) {
                     unorderedListItem = false;
@@ -132,22 +120,22 @@ class MarkdownParser {
                 continue;
             }
 
-            if (previousLine == "" && htmlElements) {
+            if (previousLine == "" && htmlElements.length > 0) {
                 rawHtml += '\n</{htmlElements.pop()}>\n';
             }
-            if (unorderedListItem && line[0] != "-") {
+            if (unorderedListItem && line.charAt(0) != "-") {
                 unorderedListItem = false;
             }
-            if (orderedListItem && line[0] != "+") {
+            if (orderedListItem && line.charAt(0) != "+") {
                 orderedListItem = false;
             }
-            if (blockquoteItem && line[0] != ">") {
+            if (blockquoteItem && line.charAt(0) != ">") {
                 blockquoteItem = false;
             }
 
-            specialCharacters = getSpecialCharacters(line);
-            if (specialCharacters == null) {
-                if (previousLine == null || previousLine == "") {
+            var specialCharacters: Array<{match:String, span:{start:Int, end:Int}}> = getSpecialCharacters(line);
+            if (specialCharacters == []) {
+                if (previousLine == "") {
                     rawHtml += "<p>";
                     htmlElements.push("p");
                 }
@@ -159,7 +147,7 @@ class MarkdownParser {
             previousLine = line;
         }
 
-        while (htmlElements.length) {
+        while (htmlElements.length > 0) {
             rawHtml += '\n</${htmlElements.pop()}>';
         }
     }
@@ -168,46 +156,48 @@ class MarkdownParser {
      * Parse the given line with special characters into HTML.
      *
      * @param line The line to be parsed.
-     * @param matchedRegex The regex that was matched.
+     * @param matchedRegex The regex list that was matched.
      */
-    function parseSpecialCharacters(line: String, matchedRegex: Array<String>) {
+    function parseSpecialCharacters(line: String, matchedRegex: Array<{match:String, span:{start:Int, end:Int}}>) {
         if (matchedRegex.length == 0) {
             return;
         }
 
-        // Turn the string `line` into an array
-        line = line.split("");
-
-        var closingTag = null;
-        var regex = matchedRegex.pop(0);
+        var closingTag: String = "";
+        var regex: {match:String, span:{start:Int, end:Int}} = matchedRegex[0];
+        matchedRegex.remove(regex);
+        // Keep track of the current regex start and end position, in case of an update
+        var spanStart: Int = regex.span.start;
+        var spanEnd: Int = regex.span.end;
         // Starting and ending (non-inclusive) index of special characters in `line`
-        spanStart, spanEnd = regex.span();
-        var specialChars = regex.string.slice(spanStart, spanEnd);
-        var specialCharsLength = specialChars.length;
+        var specialChars: String = regex.match;
+        var specialCharsLength: Int = specialChars.length;
 
-        if (line.slice(0, spanStart).strip() != "") {
-            rawHtml += '<p>\n${line.slice(0, spanStart)}';
+        if (StringTools.trim(line.substring(0, spanStart)) != "") {
+            rawHtml += '<p>\n${line.substring(0, spanStart)}';
             htmlElements.push("p");
         }
 
         if (
-            specialChars[0] == "#"
-            && line[0] == "#"
-            && line.slice(specialCharsLength, specialCharsLength + 2) == " "
+            specialChars.charAt(0) == "#"
+            && line.charAt(0) == "#"
+            && line.substring(specialCharsLength, specialCharsLength + 2) == " "
         ) {
-            var tag = if (specialCharsLength >= 6) "<h6>" else '<h${specialCharsLength}>';
+            var tag: String = if (specialCharsLength >= 6) "<h6>" else '<h${specialCharsLength}>';
             rawHtml += tag;
-            var closingTag = (
+            closingTag = (
                 if (specialCharsLength >= 6) "</h6>\n"
                 else '</h${specialCharsLength}>\n'
             );
-        } else if (specialChars[0] == "*") {
+        } else if (specialChars.charAt(0) == "*") {
             // Pop the matched regex again as patterns that require opening and closing
             // patterns produce two matching elements, and are displayed twice
             // e.g. Bold --> **text to make bold** (requires '**' at the start and ending)
             // If there is no matching regex at the end, treat as normal text and print it.
             if (matchedRegex.length > 0) {
-                regex = validateRegex(regex, matchedRegex.pop(0));
+                var popped: {match:String, span:{start:Int, end:Int}} = matchedRegex[0];
+                matchedRegex.remove(popped);
+                regex = validateRegex(regex, popped);
                 if (regex == null) {
                     appendInvalidRegex(line);
                     return;
@@ -218,7 +208,7 @@ class MarkdownParser {
             }
 
             // Don't add a new line at the end as these could be inline.
-            var content = line.slice(spanEnd, regex.span()[0]).strip();
+            var content: String = StringTools.trim(line.substring(spanEnd, regex.span.start));
             if (specialCharsLength == 1) {
                 rawHtml += '<i>${content}</i>';
             } else if (specialCharsLength == 2) {
@@ -229,31 +219,32 @@ class MarkdownParser {
                 appendInvalidRegex(line);
                 return;
             }
-        } else if (specialChars[0] == "_") {
+        } else if (specialChars.charAt(0) == "_") {
             if (specialCharsLength > 1 || matchedRegex.length == 0) {
                 appendInvalidRegex(line);
                 return;
             } else {
-                regex = validateRegex(regex, matchedRegex.pop(0));
+                var popped: {match:String, span:{start:Int, end:Int}} = matchedRegex[0];
+                matchedRegex.remove(popped);
+                regex = validateRegex(regex, popped);
                 if (regex == null) {
                     appendInvalidRegex(line);
                     return;
                 }
             }
 
-            var content = line.slice(spanEnd, regex.span()[0]).strip();
+            var content: String = StringTools.trim(line.substring(spanEnd, regex.span.start));
             rawHtml += '<p style="text-decoration: underline;">${content}</p>';
-        } else if (specialChars[0] == "!") {
-            regex = [
-                for (match in re.finditer(r"\!\[.*?\]\(.*?\)", line)) if match.group()
-            ];
-            if (regex.length > 0) {
-                altText, src = regex[0].group().split("](");
-                altText = altText.slice(2, altText.length);
-                src = src.slice(0, src.length - 1);
+        } else if (specialChars.charAt(0) == "!") {
+            regex = getSpecialCharacters(line, "![[^]]*]([^)]*)")[0];
+            if (regex != null) {
+                var link: Array<String> = regex.match.split("](");
+                var src: String = link[0].substring(2, link[0].length);
+                var altText: String = link[1].substring(0, link[1].length-1);
                 rawHtml += '<img src="${src}" alt="${altText}"/>';
 
-                line = line.slice(regex[0].span()[1], line.length);
+                // FIX -- Maybe make into while ( regex.length > 0 ) ???
+                line = line.substring(regex.span.end, line.length);
                 // Since URLs have some of the special characters that the markdown
                 // parser understands, it's required that after parsing the URL, the
                 // link is removed from the line and the `matchedRegex` list is
@@ -264,18 +255,16 @@ class MarkdownParser {
                 appendInvalidRegex(line);
                 return;
             }
-        } else if (specialChars[0] == "[") {
-            var regex = [
-                // FIX
-                match for match in re.finditer(r"\[.*?\]\(.*?\)", line) if match.group()
-            ];
+        } else if (specialChars.charAt(0) == "[") {
+            regex = getSpecialCharacters(line, "[[^]]*]([^)]*)")[0];
             if (regex != null) {
-                text, src = regex[0].group().split("](");
-                text = text.slice(1, text.length);
-                src = src.slice(0, src.length - 2);
+                var link: Array<String> = regex.match.split("](");
+                var src: String = link[0].substring(1, link[0].length);
+                var text: String = link[1].substring(0, link[1].length-1);
                 rawHtml += '<a href="${src}">${text}</a>';
 
-                line = line.slice(regex[0].span()[1], line.length);
+                // FIX -- Maybe make into while ( regex.length > 0 ) ???
+                line = line.substring(regex.span.end, line.length);
                 // Since URLs have some of the special characters that the markdown
                 // parser understands, it's required that after parsing the URL, the
                 // link is removed from the line and the `matchedRegex` list is
@@ -286,7 +275,7 @@ class MarkdownParser {
                 appendInvalidRegex(line);
                 return;
             }
-        } else if (specialChars[0] == ">" && line.length > 1 && line.slice(1, line.length).strip() != "") {
+        } else if (specialChars.charAt(0) == ">" && line.length > 1 && StringTools.trim(line.substring(1, line.length)) != "") {
             if (!blockquoteItem) {
                 blockquoteItem = true;
                 rawHtml += "<blockquote>\n";
@@ -295,7 +284,7 @@ class MarkdownParser {
 
             rawHtml += "<p>";
             closingTag = "</p>\n";
-        } else if (specialChars[0] == "-" && line.length > 1 && line.slice(1, line.length).strip() != "") {
+        } else if (specialChars.charAt(0) == "-" && line.length > 1 && StringTools.trim(line.substring(1, line.length)) != "") {
             if (!unorderedListItem) {
                 unorderedListItem = true;
                 rawHtml += "<ul>\n";
@@ -304,7 +293,7 @@ class MarkdownParser {
 
             rawHtml += "<li>";
             closingTag = "</li>\n";
-        } else if (specialChars[0] == "+" && line.length > 1 && line.slice(1, line.length).strip() != "") {
+        } else if (specialChars.charAt(0) == "+" && line.length > 1 && StringTools.trim(line.substring(1, line.length)) != "") {
             if (!orderedListItem) {
                 orderedListItem = true;
                 rawHtml += "<ol>\n";
@@ -321,30 +310,23 @@ class MarkdownParser {
         // Send the substring that contains more markdown content to be parsed again
         // e.g. # An h1 header with **bold text**
         if (matchedRegex.length > 0) {
-            // FIX
-            next_regex_start, _ = matchedRegex[0].span();
-            // Use `regex.span()[1]` instead of `spanEnd` as `regex` could have been
+            var nextRegexStart: Int = matchedRegex[0].span.start;
+            // Use `regex.span.end` instead of `spanEnd` as `regex` could have been
             // updated in the case of an emphasis styling pattern. This does not update
             // `spanStart` or `spanEnd`.
-            rawHtml += line.slice(regex.span()[1], next_regex_start);
+            rawHtml += line.substring(regex.span.end, nextRegexStart);
             parseSpecialCharacters(
-                line.slice(next_regex_start, line.length),
-                getSpecialCharacters(line.slice(next_regex_start, line.length)),
+                line.substring(nextRegexStart, line.length),
+                getSpecialCharacters(line.substring(nextRegexStart, line.length))
             );
             matchedRegex = [];
         } else if (regex != null) {
-            rawHtml += line.slice(regex.span()[1], line.length);
+            rawHtml += line.substring(regex.span.end, line.length);
         } else {
             rawHtml += line;
         }
 
-        // Some regexes might finish before the actual line does thus,
-        // `closingTag` might be `null`
-        // e.g. # This line is an h1 header with ***bold and italic text*** and more normal text
-        //      </i></b> closes before the end of the line so `closingTag` is `null`.
-        if (closingTag) {
-            rawHtml += '${closingTag}';
-        }
+        rawHtml += '${closingTag}';
     }
 
     /**
@@ -357,10 +339,12 @@ class MarkdownParser {
      * @param poppedRegex The regex currently under evaluation.
      * @returns The `poppedRegex` if it's a match, `null` otherwise.
      */
-    function validateRegex(currentRegex: Array<String>, poppedRegex: Array<String>) {
-        if (Std.string(currentRegex.group()) == Std.string(poppedRegex.group())) {
+    function validateRegex(currentRegex: {match:String, span:{start:Int, end:Int}}, poppedRegex: {match:String, span:{start:Int, end:Int}}): {match:String, span:{start:Int, end:Int}} {
+        if (currentRegex.match == poppedRegex.match) {
             return poppedRegex;
         }
+
+        return null;
     }
 
     /**
@@ -391,21 +375,45 @@ class MarkdownParser {
     }
 
     /**
-     * Uses a predefined regular expression to capture any special characters from the
-     * provided string and returns them as a list of `String` elements.
+     * Uses a give regular expression (a predefined one otherwise) to capture any
+     * special characters from the provided string and returns them as a list of
+     * `String` elements.
      * 
      * @param string The string to extract the special characters from.
+     * @param regex The regular expression to be run as a string.
      * @returns A list of `String` elements representing all the matched special
-     *      charaters found in `string`.
+     *  characters found in `string`, and their starting and ending positions in
+     *  the original string.
      */
-    function getSpecialCharacters(string: String) {
-        // FIX
-        pattern = r"[^a-zA-Z0-9 '\"./\\@$%&=;:<,?{}|~]*";
-        return [for (match in re.finditer(pattern, string)) if match.group()];
+    function getSpecialCharacters(string: String, regex: String = "[^a-zA-Z0-9 '\"./\\@$%&=;:<,?{}|~]*"): Array<{match:String, span:{start:Int, end:Int}}> {
+        var pattern: EReg = new EReg(regex, "gi");
+        var matches: Array<{match:String, span:{start:Int, end:Int}}> = [];
+        while (pattern.match(string)) {
+            var position: {pos: Int, len: Int} = pattern.matchedPos();
+            if (matches.length > 0) {
+                position = {
+                    "pos": matches[matches.length - 1].span.end + position.pos,
+                    "len": position.len,
+                };
+            }
+            matches.push(
+                {
+                    "match": pattern.matched(0),
+                    "span": {
+                        "start": position.pos,
+                        "end": position.pos + position.len,
+                    },
+                }
+            );
+            string = pattern.matchedRight();
+        }
+        return matches;
     }
+}
 
-
-var content = "This is a multiline input
+class MarkdownParser {
+    /****** MAIN FUNCTION *****/
+    var content = "This is a multiline input
 to be parsed in the markdown parser
 
 # *This line should be an h1 header with italic text*
@@ -456,13 +464,11 @@ This line should contain a hyperlink to [Google.com](https://www.google.com).
 
 This line should have an **image** of a muffin ![muffin time](https://static.wikia.nocookie.net/asdfmovie/images/1/1d/Muffin.png/revision/latest/scale-to-width-down/148?cb=20180617145555) with alternate text 'muffin time'.";
 
-
-/**
- * Display a help message and exit the program.
- */
-function show_help_message() {
-    trace(
-        "
+    /**
+     * Display a help message and exit the program.
+     */
+    public static function showHelpMessage() {
+        Sys.println("
 Shaved down version of the Common Mark markdown parser created as part of COMP30040.
 This version was written for Python3.
 
@@ -490,44 +496,55 @@ Exit Codes:
 1 - Erroneous input
 
 Author: Marios Yiannakou, GitHub: @Mariosyian"
-    );
-    sys.exit(0);
-}
-
-
-function main() {
-    var arguments = sys.args();
-    var flags: Map<String, Bool> = [
-        "help" => arguments.has("--help"),
-        "raw" => arguments.has("--raw"),
-        "prettify" => arguments.has("--prettify"),
-        "stdout" => arguments.has("--stdout"),
-        "demo" => arguments.has("--demo"),
-    ];
-
-    if (flags["help"]) {
-        show_help_message();
+        );
+        Sys.exit(0);
+    }
+    
+    public static function contains(arr: Array<String>, e: String): Bool {
+        return arr.indexOf(e) != -1;
     }
 
-    if (flags["raw"]) {
-        try {
-            content = arguemnts[arguemnts.index("--raw") + 1];
-        } catch(e) {
-            trace("No markdown string was provided.");
-            sys.exit(1);
+    public static function main() {
+        trace("HI")
+        var arguments: Array<String> = Sys.args();
+        trace("HI")
+        var flags: Map<String, Bool> = [
+            // FIX -- Why doesn't arguments.contains() work??
+            "help" => contains(arguments, "--help"),
+            "raw" => contains(arguments, "--raw"),
+            "prettify" => contains(arguments, "--prettify"),
+            "stdout" => contains(arguments, "--stdout"),
+            "demo" => contains(arguments, "--demo"),
+        ];
+    
+        trace("HI")
+        if (flags["help"]) {
+            showHelpMessage();
         }
-    } else if (!flags["demo"]) {
-        try {
-            content = arguments[1];
-        } catch(e) {
-            content = null;
+    
+        trace("HI")
+        var content: String = "";
+        if (flags["raw"]) {
+            try {
+                content = arguments[arguments.indexOf("--raw") + 1];
+            } catch(e:Any) {
+                Sys.println("No markdown string was provided.");
+                Sys.exit(1);
+            }
+        } else if (!flags["demo"]) {
+            try {
+                content = arguments[1];
+            } catch(e:Any) {
+                content = null;
+            }
         }
-    }
 
-    new MarkdownParser(
-        content,
-        flags["demo"] || flags["raw"],
-        flags["prettify"],
-        flags["stdout"],
-    );
+        trace("HI")
+        new Markdown_Parser(
+            content,
+            flags["demo"] || flags["raw"],
+            flags["prettify"],
+            flags["stdout"]
+        );
+    }
 }
