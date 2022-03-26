@@ -62,7 +62,7 @@
 CURRENT_DIR=$(pwd)
 PROGRAMS_DIR="${CURRENT_DIR}/implementations"
 BENCHMARKS_DIR="${CURRENT_DIR}/benchmarks"
-BENCHMARKS_FILE="${BENCHMARKS_DIR}/benchmarks"
+BENCHMARKS_FILE="${BENCHMARKS_DIR}/benchmarks_$(date +%F_%R)"
 MARKDOWN_DIR="${CURRENT_DIR}/markdown-parser"
 
 DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
@@ -83,8 +83,14 @@ DISPLAY=0
 RUNS=10
 TEST=0
 VERBOSE=0
+CSV=0
 while test $# -gt 0; do
   case "$1" in
+  --csv)
+        shift
+        CSV=1
+        BENCHMARKS_FILE="${BENCHMARKS_FILE}.csv"
+        ;;
     -d|--display)
         shift
         DISPLAY=1
@@ -97,10 +103,10 @@ while test $# -gt 0; do
         echo "written in the implementations directory. The script compiles and runs"
         echo "all language implementations of one algorithm, before moving to the next."
         echo ""
-        echo "Usage: ./benchmarks.sh [-d|--display-report] [-h|--help] [-r 10|--runs 10]"
-        echo "                       [-t|--test] [-v|--verbose] [--test-and-benchmark]"
+        echo "Usage: ./benchmarks.sh [--csv] [-d|--display-report] [-h|--help] [-r 10|--runs 10] [-t|--test] [-v|--verbose] [--test-and-benchmark]"
         echo ""
         echo "Options:"
+        echo "--csv                 save the benchmark results as a CSV file"
         echo "-d, --display-report  display the benchmark report after completion"
         echo "-h, --help            show this help message and exit"
         echo "-r, --runs            the amount of times to run each algorithm. Defaults to 10"
@@ -233,10 +239,13 @@ function time_taken() {
     # Unshared:0, Elapsed real time (s):171.79, Avg Total Mem: 0, Max RSS: 183932, Avg RSS: 0, CPU%: 46%, CPU sec (sys):2.86, CPU sec (usr):77.24
 
     LAST_LINE=$(tail $TEMP_FILE -n 1)
-    ELAPSED_TIME_HOURS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $5}')
-    ELAPSED_TIME_MINUTES=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $7}')
-    ELAPSED_TIME_SECONDS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $9}')
-    ELAPSED_TIME=$(bc <<< "$ELAPSED_TIME_HOURS * 3600 + $ELAPSED_TIME_MINUTES * 60 + $ELAPSED_TIME_SECONDS")
+    ELAPSED_TIME=$(echo $LAST_LINE | awk '{print $4}')
+    readarray -d ":" -t ELAPSED_TIME_ARR <<< $ELAPSED_TIME
+    ELAPSED_TIME=$((${ELAPSED_TIME_ARR[0]} * 60 + ${ELAPSED_TIME_ARR[1]}))
+    # ELAPSED_TIME_HOURS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $5}')
+    # ELAPSED_TIME_MINUTES=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $7}')
+    # ELAPSED_TIME_SECONDS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $9}')
+    # ELAPSED_TIME=$(bc <<< "$ELAPSED_TIME_HOURS * 3600 + $ELAPSED_TIME_MINUTES * 60 + $ELAPSED_TIME_SECONDS")
 
     LOCAL_AVERAGE_CPU=$(float_to_int $(echo $LAST_LINE | awk '{print $5}'))
     LOCAL_AVERAGE_RSS=$(echo $LAST_LINE | awk '{print $7}')
@@ -290,14 +299,11 @@ function time_taken() {
     # - Average VMS contributes to 10% (lower is better)
     #   - 100% = <=6000 ?? Based on algorithm ??
     #   - 0% = >=100,000
-    TIME_SCORE=$(bc <<< "(10 / $ELAPSED_TIME) * 50")
+    TIME_SCORE=$(((10 / $ELAPSED_TIME) * 50))
+    # TIME_SCORE=$(bc <<< "(10 / $ELAPSED_TIME) * 50")
     CPU_SCORE=$(((100 / $LOCAL_AVERAGE_CPU) * 30))
     RSS_SCORE=$(((3000 / $LOCAL_AVERAGE_RSS) * 10))
     VMS_SCORE=$(((6000 / $LOCAL_AVERAGE_VMS) * 10))
-
-    GLOBAL_AVERAGE_CPU=$(($GLOBAL_AVERAGE_CPU + $LOCAL_AVERAGE_CPU))
-    GLOBAL_AVERAGE_RSS=$(($GLOBAL_AVERAGE_RSS + $LOCAL_AVERAGE_RSS))
-    GLOBAL_AVERAGE_VMS=$(($GLOBAL_AVERAGE_VMS + $LOCAL_AVERAGE_VMS))
 
     # Cleanup
     # - Delete temporary file(s)
@@ -306,7 +312,7 @@ function time_taken() {
     rm $TEMP_TIME_FILE
     IFS=$OG_IFS
 
-    echo "$ELAPSED_TIME $GLOBAL_AVERAGE_CPU $GLOBAL_AVERAGE_RSS $GLOBAL_AVERAGE_VMS $(($TIME_SCORE + $CPU_SCORE + $RSS_SCORE + $VMS_SCORE))"
+    echo "$ELAPSED_TIME $LOCAL_AVERAGE_CPU $LOCAL_AVERAGE_RSS $LOCAL_AVERAGE_VMS $(($TIME_SCORE + $CPU_SCORE + $RSS_SCORE + $VMS_SCORE))"
 }
 
 # Updates the global variables required to calculate the score of a language.
@@ -317,8 +323,8 @@ function time_taken() {
 # Returns:
 #   N/A
 function update_globals() {
-    TIME_TAKEN=$(bc <<< "$TIME_TAKEN + $1")
-    # TIME_TAKEN=$(($TIME_TAKEN + $1))
+    TIME_TAKEN=$(($TIME_TAKEN + $1))
+    # TIME_TAKEN=$(bc <<< "$TIME_TAKEN + $1")
     GLOBAL_AVERAGE_CPU=$(($GLOBAL_AVERAGE_CPU + $2))
     GLOBAL_AVERAGE_RSS=$(($GLOBAL_AVERAGE_RSS + $3))
     GLOBAL_AVERAGE_VMS=$(($GLOBAL_AVERAGE_VMS + $4))
@@ -442,17 +448,26 @@ function bench_toy_programs() {
                     readarray -d " " -t TIME_FNC <<< $(time_taken ${COMMAND})
                     update_globals ${TIME_FNC[@]}
                     if [ $VERBOSE -eq 1 ]; then
-                        echo -e "${language}|${algorithm}|$(seq -f "%0${#RUNS}g" $count $count)|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                        if [ $CSV -eq 1 ]; then
+                            echo -e "${language},${algorithm},$(seq -f "%0${#RUNS}g" $count $count),${TIME_TAKEN},${GLOBAL_AVERAGE_CPU},${GLOBAL_AVERAGE_RSS},${GLOBAL_AVERAGE_VMS},$SCORE" >> $BENCHMARKS_FILE 
+                        else
+                            echo -e "${language}|${algorithm}|$(seq -f "%0${#RUNS}g" $count $count)|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                        fi
                         reset_globals
                     fi
                 done
+
                 echo -e "[${language}/${algorithm}-$(seq -f "%0${#RUNS}g" ${RUNS} ${RUNS})]\t...${TIME_TAKEN}s"
                 if [ $VERBOSE -eq 0 ]; then
-                    GLOBAL_AVERAGE_CPU=$(( $GLOBAL_AVERAGE_CPU / $RUNS))
-                    GLOBAL_AVERAGE_RSS=$(( $GLOBAL_AVERAGE_RSS / $RUNS))
-                    GLOBAL_AVERAGE_VMS=$(( $GLOBAL_AVERAGE_VMS / $RUNS))
-                    SCORE=$(( $SCORE / $RUNS))
-                    echo -e "${language}|${algorithm}|${RUNS}|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                    GLOBAL_AVERAGE_CPU=$(( ${GLOBAL_AVERAGE_CPU} / $RUNS))
+                    GLOBAL_AVERAGE_RSS=$(( ${GLOBAL_AVERAGE_RSS} / $RUNS))
+                    GLOBAL_AVERAGE_VMS=$(( ${GLOBAL_AVERAGE_VMS} / $RUNS))
+                    SCORE=$(( ${SCORE} / $RUNS))
+                    if [ $CSV -eq 1 ]; then
+                        echo -e "${language},${algorithm},${RUNS},${TIME_TAKEN},${GLOBAL_AVERAGE_CPU},${GLOBAL_AVERAGE_RSS},${GLOBAL_AVERAGE_VMS},$SCORE" >> $BENCHMARKS_FILE
+                    else
+                        echo -e "${language}|${algorithm}|${RUNS}|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                    fi
                 fi
                 TIME_TAKEN=0
             fi
@@ -499,7 +514,6 @@ function bench_markdowns() {
                 echo "($language) has no compilation steps. Did you forget to update the benchmark script?"
                 ;;
         esac
-
         if [ $BENCHMARK -eq 1 ]; then
             reset_globals
             for count in $(eval echo {1..$RUNS}); do
@@ -508,19 +522,30 @@ function bench_markdowns() {
                 readarray -d " " -t TIME_FNC <<< $(time_taken ${COMMAND})
                 update_globals ${TIME_FNC[@]}
                 if [ $VERBOSE -eq 1 ]; then
-                    echo -e "${language}|markdown-parser|$(seq -f "%0${#RUNS}g" $count $count)|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                    if [ $CSV -eq 1 ]; then
+                        echo -e "${language},markdown-parser,$(seq -f "%0${#RUNS}g" $count $count),${TIME_TAKEN},${GLOBAL_AVERAGE_CPU},${GLOBAL_AVERAGE_RSS},${GLOBAL_AVERAGE_VMS},$SCORE" >> $BENCHMARKS_FILE 
+                    else
+                        echo -e "${language}|markdown-parser|$(seq -f "%0${#RUNS}g" $count $count)|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                    fi
                     reset_globals
                 fi
             done
+
             echo -e "[${language}/markdown-parser-$(seq -f "%0${#RUNS}g" ${RUNS} ${RUNS})]\t...${TIME_TAKEN}s"
             if [ $VERBOSE -eq 0 ]; then
                 GLOBAL_AVERAGE_CPU=$(( ${GLOBAL_AVERAGE_CPU} / $RUNS))
                 GLOBAL_AVERAGE_RSS=$(( ${GLOBAL_AVERAGE_RSS} / $RUNS))
                 GLOBAL_AVERAGE_VMS=$(( ${GLOBAL_AVERAGE_VMS} / $RUNS))
                 SCORE=$(( ${SCORE} / $RUNS))
-                echo -e "${language}|markdown-parser|${RUNS}|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                if [ $CSV -eq 1 ]; then
+                    echo -e "${language},markdown-parser,${RUNS},${TIME_TAKEN},${GLOBAL_AVERAGE_CPU},${GLOBAL_AVERAGE_RSS},${GLOBAL_AVERAGE_VMS},$SCORE" >> $BENCHMARKS_FILE
+                else
+                    echo -e "${language}|markdown-parser|${RUNS}|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                fi
             fi
             TIME_TAKEN=0
+            # File created from the markdown parser.
+            rm "parsed.html"
         fi
         cd ..
         sleep $INTERVAL
@@ -532,7 +557,11 @@ function bench_markdowns() {
 # FILES_TO_CLEANUP = ()
 TIME_TAKEN=0
 cat /dev/null > $BENCHMARKS_FILE
-echo -e "LANGUAGE|ALGORITHM|RUN|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)|SCORE" >> $BENCHMARKS_FILE
+if [ $CSV -eq 1 ]; then
+    echo -e "LANGUAGE,ALGORITHM,RUN,ELAPSED (s),Avg. CPU (%),Avg. RSS (KB),Avg. VMS (KB),SCORE" >> $BENCHMARKS_FILE
+else
+    echo -e "LANGUAGE|ALGORITHM|RUN|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)|SCORE" >> $BENCHMARKS_FILE
+fi
 # ******************************************
 # ********** RUN THE TOY PROGRAMS **********
 # ******************************************
@@ -543,7 +572,7 @@ bench_toy_programs
 # ******************************************
 bench_markdowns
 
-if [ $BENCHMARK -eq 1 ]; then
+if [ $BENCHMARK -eq 1 ] && [ $CSV -eq 0 ]; then
     BENCHMARKS_FILE_B="${BENCHMARKS_FILE}_B"
     cat $BENCHMARKS_FILE | column -t -s "|" > ${BENCHMARKS_FILE_B}
 
@@ -571,9 +600,11 @@ if [ $BENCHMARK -eq 1 ]; then
     mv $BENCHMARKS_FILE_B $BENCHMARKS_FILE
 
     echo "Results written to $BENCHMARKS_FILE"
+elif [ $BENCHMARK -eq 1 ] && [ $CSV -eq 1 ]; then
+    echo "Results written to $BENCHMARKS_FILE"
 fi
 
-if [ $DISPLAY -eq 1 ] && [ $BENCHMARK -eq 1 ]; then
+if [ $BENCHMARK -eq 1 ] && [ $DISPLAY -eq 1 ]; then
     echo "                         -----------------------------------"
     cat $BENCHMARKS_FILE
 fi
