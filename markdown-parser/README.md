@@ -11,7 +11,7 @@ This parser does **NOT** support:
 
 
 ## Paragraph | `<p>`
-A normal paragraph or `<p>` element is a string of alphanumeric characters, along with any special characters that are not reserved for Markdown parsing. The list contains (but not limited to) `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '"./\@$%&-=+;:<,?{}[]()|~` and as a regex `$[a-zA-Z0-9 '"./\@$%&-=+;:<>,?{}[]()|~]^`. Depending on how they are used, some of these characters may be parsed as markdown
+A normal paragraph or `<p>` element is a string of alphanumeric characters, along with any special characters that are not reserved for Markdown parsing. The list contains (but not limited to) `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '"./\@$%&-=+;:<,?{}[]()|~` and as a regex `^[a-zA-Z0-9 '"./\@$%&-=+;:<>,?!{}[]()|~#]*$`. Depending on how they are used, some of these characters may be parsed as markdown
 
 A new paragraph is created by adding an empty line.
 ```
@@ -33,28 +33,60 @@ This is a new paragraph explaining why the above characters are not caught. A hy
 Emphasis styling such as italic or `<i>`, bold or `<b>`, or both `<b><i>` are defined as `*`,  `**`, and `***` respectively and must wrap around the content they are targeting. In addition, underlining or `<p style="text-decoration: underline;">` is defined as `_` and must wrap around the content it is targeting.
 ```
 # Markdown
-*This line should is italic.*
-**This line should is bold.**
-***This line should is both bold and italic.***
+*This line should be italic.*
+**This line should be bold.**
+***This line should be both bold and italic.***
 _This line is underlined_
    -----
 # HTML
-<i>This line should is italic.</i>
-<b>This line should is bold.</b>
-<b><i>This line should is both bold and italic.</i></b>
+<i>This line should be italic.</i>
+<b>This line should be bold.</b>
+<b><i>This line should be both bold and italic.</i></b>
 <p style="text-decoration: underline;">This line is underlined</p>
 ```
-*This line should is italic.*
+*This line should be italic.*
 
-**This line should is bold.**
+**This line should be bold.**
 
-***This line should is both bold and italic.***
+***This line should be both bold and italic.***
 
 The underline is not supported by most Markdown parsers, and the underscore `_` is usually used similary to the `*` for italic and bold.
 
 ---
+## Headers | `<hX>`
+A header or `[<h1>, <h2>, <h3>, <h4>, <h5>, <h6>]` element is defined as `# An h1 element`. A header can be styled as described in the #Styling section.
+```
+# Markdown
+# This is an h1 header.
+## This is an h2 header.
+### This is an h3 header.
+#### This is an h4 header.
+##### This is an h5 header.
+###### This is an h6 header.
+####### Anything above 6 '#' characters is considerd an h6 header.
+   -----
+# HTML
+<h1>This is an h1 header.</h1>
+<h2>This is an h2 header.</h2>
+<h3>This is an h3 header.</h3>
+<h4>This is an h4 header.</h4>
+<h5>This is an h5 header.</h5>
+<h6>This is an h6 header.</h6>
+<h6>Anything above 6 '#' characters is considerd an h6 header.</h6>
+```
+# This is an h1 header.
+## This is an h2 header.
+### This is an h3 header.
+#### This is an h4 header.
+##### This is an h5 header.
+###### This is an h6 header.
+####### Anything above 6 '#' characters is considerd an h6 header.
+
+The "over 6 `#` characters" rule is not included in conventional markdown parsers.
+
+---
 ## Lists | `<ul>` or `<ol>`
-An unordered list or `<ul>` element is defined as `- List Item 1`, while an ordered list or `<ol>` element is defined as `+ List Item 1`. This only supports plain or stylised text, and hyperlinks.
+An unordered list or `<ul>` element is defined as `- List Item 1`, while an ordered list or `<ol>` element is defined as `+ List Item 1`. This only supports plain or stylised text, and hyperlinks. The `-` and `+` characters must be the first characters in the line.
 ```
 # Markdown
 - This is the first item in an unordered list.
@@ -90,7 +122,7 @@ An unordered list or `<ul>` element is defined as `- List Item 1`, while an orde
 The plus sign is interpreted as an unordered list in most Markdown parsers.
 ---
 ## Anchor tags / Hyperlinks | `<a>`
-A hyperlink or `<a>` element is defined as `[text to display](URL)`. A hyperlink can be styled as described in the #Styling section.
+A hyperlink or `<a>` element is defined as `[text to display](URL)`. A hyperlink may only contain plain text (i.e. does not parse styling patterns).
 ```
 # Markdown
 This line contains a hyperlink to my [GitHub page](https://www.github.com/Mariosyian).
@@ -114,7 +146,7 @@ This line contains an image of a muffin ![It's muffin time!](https://static.wiki
 
 ---
 ## BlockQuote | `<blockquote>`
-A blockquote is defined by a `>` character followed by a single space, and is contained in a single line. Multiple blockquotes with no empty line in-between, are rendered as a single multiline blockquote.
+A blockquote is defined by a `>` character followed by a single space, and is contained in a single line. Multiple blockquotes with no empty line in-between, are rendered as a single multiline blockquote. The `>` character must be the first character in the line.
 
 Blockquote lines support plain and stylised text.
 ```
@@ -124,12 +156,20 @@ Blockquote lines support plain and stylised text.
 > This is the first item in a multiline blockquote.
 > **This is the second item in a blockquote and it's bold**.
 > *This is the third item in a blockquote and it's italic*.
-> ***This is the third item in a blockquote and it's both***.
-> This is the third item in a blockquote and it's part plain, **part bold**, and *part italic*.
+> ***This is the fourth item in a blockquote and it's both***.
+> This is the fifth item in a blockquote and it's part plain, **part bold**, and *part italic*.
    -----
 # HTML
 <blockquote>
 <p>This is a blockquote</p>
+</blockquote>
+
+<blockquote>
+<p>This is the first item in a multiline blockquote.</p>
+<p>This is the second item in a blockquote and it's bold.</p>
+<p>This is the third item in a blockquote and it's italic.</p>
+<p>This is the fourth item in a blockquote and it's both.</p>
+<p>This is the fifth item in a blockquote and it's part plain, part bold, and part italic.</p>
 </blockquote>
 ```
 > This is a blockquote
@@ -137,5 +177,5 @@ Blockquote lines support plain and stylised text.
 > This is the first item in a multiline blockquote.
 > **This is the second item in a blockquote and it's bold**.
 > *This is the third item in a blockquote and it's italic*.
-> ***This is the third item in a blockquote and it's both***.
-> This is the third item in a blockquote and it's part plain, **part bold**, and *part italic*.
+> ***This is the fourth item in a blockquote and it's both***.
+> This is the fifth item in a blockquote and it's part plain, **part bold**, and *part italic*.
