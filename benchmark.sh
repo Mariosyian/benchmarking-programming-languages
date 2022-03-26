@@ -63,6 +63,7 @@ CURRENT_DIR=$(pwd)
 PROGRAMS_DIR="${CURRENT_DIR}/implementations"
 BENCHMARKS_DIR="${CURRENT_DIR}/benchmarks"
 BENCHMARKS_FILE="${BENCHMARKS_DIR}/benchmarks"
+MARKDOWN_DIR="${CURRENT_DIR}/markdown-parser"
 
 DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
 SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
@@ -72,6 +73,7 @@ UNITY="${DEPENDENCIES_DIR}/unity/unity.c"
 
 LANGUAGES=(rust go java c python haxe)
 ALGORITHMS=(sieve)
+MARKDOWNS=(python haxe)
 
 INTERVAL=1
 
@@ -222,17 +224,20 @@ function time_taken() {
     IFS=$'\n'
 
     TEMP_FILE="tmp_bench"
+    TEMP_TIME_FILE="tmp_time"
 
     # Get the command output and cut the top line (header line)
-    { python $SYRUPY -S -C --no-raw-process-log "$@" 2> /dev/null; } | sed 1d > $TEMP_FILE
+    { python $SYRUPY -S -C --no-raw-process-log "$@" 2> $TEMP_TIME_FILE; } | sed 1d > $TEMP_FILE
     # TODO: New benchmark tool `/usr/bin/time`
     # /usr/bin/time -f "Unshared:%D\nElapsed real time (s):%e\nAvg Total Mem: %K\nMax RSS: %M\nAvg RSS: %t\nCPU%%: %P\nCPU sec (sys):%S\nCPU sec (usr):%U"
     # Unshared:0, Elapsed real time (s):171.79, Avg Total Mem: 0, Max RSS: 183932, Avg RSS: 0, CPU%: 46%, CPU sec (sys):2.86, CPU sec (usr):77.24
 
     LAST_LINE=$(tail $TEMP_FILE -n 1)
-    ELAPSED_TIME=$(echo $LAST_LINE | awk '{print $4}')
-    readarray -d ":" -t ELAPSED_TIME_ARR <<< $ELAPSED_TIME
-    ELAPSED_TIME=$((${ELAPSED_TIME_ARR[0]} * 60 + ${ELAPSED_TIME_ARR[1]}))
+    ELAPSED_TIME_HOURS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $5}')
+    ELAPSED_TIME_MINUTES=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $7}')
+    ELAPSED_TIME_SECONDS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $9}')
+    ELAPSED_TIME=$(bc <<< "$ELAPSED_TIME_HOURS * 3600 + $ELAPSED_TIME_MINUTES * 60 + $ELAPSED_TIME_SECONDS")
+
     LOCAL_AVERAGE_CPU=$(float_to_int $(echo $LAST_LINE | awk '{print $5}'))
     LOCAL_AVERAGE_RSS=$(echo $LAST_LINE | awk '{print $7}')
     LOCAL_AVERAGE_VMS=$(echo $LAST_LINE | awk '{print $8}')
@@ -285,7 +290,7 @@ function time_taken() {
     # - Average VMS contributes to 10% (lower is better)
     #   - 100% = <=6000 ?? Based on algorithm ??
     #   - 0% = >=100,000
-    TIME_SCORE=$(((10 / $ELAPSED_TIME) * 50))
+    TIME_SCORE=$(bc <<< "(10 / $ELAPSED_TIME) * 50")
     CPU_SCORE=$(((100 / $LOCAL_AVERAGE_CPU) * 30))
     RSS_SCORE=$(((3000 / $LOCAL_AVERAGE_RSS) * 10))
     VMS_SCORE=$(((6000 / $LOCAL_AVERAGE_VMS) * 10))
@@ -298,6 +303,7 @@ function time_taken() {
     # - Delete temporary file(s)
     # - Reset the IFS
     rm $TEMP_FILE
+    rm $TEMP_TIME_FILE
     IFS=$OG_IFS
 
     echo "$ELAPSED_TIME $GLOBAL_AVERAGE_CPU $GLOBAL_AVERAGE_RSS $GLOBAL_AVERAGE_VMS $(($TIME_SCORE + $CPU_SCORE + $RSS_SCORE + $VMS_SCORE))"
@@ -311,7 +317,8 @@ function time_taken() {
 # Returns:
 #   N/A
 function update_globals() {
-    TIME_TAKEN=$(($TIME_TAKEN + $1))
+    TIME_TAKEN=$(bc <<< "$TIME_TAKEN + $1")
+    # TIME_TAKEN=$(($TIME_TAKEN + $1))
     GLOBAL_AVERAGE_CPU=$(($GLOBAL_AVERAGE_CPU + $2))
     GLOBAL_AVERAGE_RSS=$(($GLOBAL_AVERAGE_RSS + $3))
     GLOBAL_AVERAGE_VMS=$(($GLOBAL_AVERAGE_VMS + $4))
@@ -331,77 +338,147 @@ function reset_globals() {
     SCORE=0
 }
 
-# TODO: Add --clean flag to cleanup compiled files
-# FILES_TO_CLEANUP = ()
-cat /dev/null > $BENCHMARKS_FILE
-echo -e "LANGUAGE|ALGORITHM|RUN|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)|SCORE" >> $BENCHMARKS_FILE
-for language in "${LANGUAGES[@]}"; do
-    if [ -d $PROGRAMS_DIR/$language ]; then
-        cd $PROGRAMS_DIR/$language
-    else
-        continue
-    fi
-    for algorithm in "${ALGORITHMS}"; do
-        if [ -d $algorithm ]; then
-            cd $algorithm
+# Runs the toy programs
+#
+# Parameters:
+#   N/A
+# Returns:
+#   N/A
+function bench_toy_programs() {
+    cd $PROGRAMS_DIR
+    for language in "${LANGUAGES[@]}"; do
+        if [ -d $language ]; then
+            cd $language
         else
             continue
         fi
+        for algorithm in "${ALGORITHMS[@]}"; do
+            if [ -d $algorithm ]; then
+                cd $algorithm
+            else
+                continue
+            fi
 
+            case $language in
+                "rust")
+                    rustc "${algorithm}_run.rs" -o "${algorithm}_run"
+                    COMMAND="./${algorithm}_run"
+                    if [ $TEST -eq 1 ]; then
+                        echo "> Running Rust tests for $algorithm"
+                        rustc --test "${algorithm}_test.rs" -o "${algorithm}_test"
+                        ./${algorithm}_test
+                        if [ $(echo $?) -ne 0 ]; then
+                            exit 1
+                        fi
+                    fi
+                    ;;
+                "go")
+                    go build -o "${algorithm}_run" .
+                    COMMAND="./${algorithm}_run"
+                    if [ $TEST -eq 1 ]; then
+                        echo "> Running Go tests for $algorithm"
+                        go test "${algorithm}_test.go"
+                        if [ $(echo $?) -ne 0 ]; then
+                            exit 1
+                        fi
+                    fi
+                    ;;
+                "java")
+                    javac -cp .:$JUNIT:$HAMCREST *.java
+                    COMMAND="java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_run"
+                    if [ $TEST -eq 1 ]; then
+                        echo "> Running Java tests for $algorithm"
+                        java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_test
+                        if [ $(echo $?) -ne 0 ]; then
+                            exit 1
+                        fi
+                    fi
+                    ;;
+                "c")
+                    # TODO: Try to implement both the normal executable and the -O2 optimisation
+                    gcc -Wall -c "${algorithm}.c" "${algorithm}_run.c"
+                    gcc -o "${algorithm}_run" "${algorithm}.o" "${algorithm}_run.o"
+                    COMMAND="./${algorithm}_run"
+                    if [ $TEST -eq 1 ]; then
+                        echo "> Running C tests for $algorithm"
+                        gcc -Wall -c "${algorithm}.c" "${algorithm}_test.c" $UNITY
+                        gcc -o "${algorithm}_test" "${algorithm}.o" "${algorithm}_test.o" "unity.o"
+                        ./${algorithm}_test
+                        if [ $(echo $?) -ne 0 ]; then
+                            exit 1
+                        fi
+                    fi
+                    ;;
+                "python")
+                    COMMAND="python ${algorithm}_run.py"
+                    if [ $TEST -eq 1 ]; then
+                        echo "> Running Python tests for $algorithm"
+                        pytest .
+                        if [ $(echo $?) -ne 0 ]; then
+                            exit 1
+                        fi
+                    fi
+                    ;;
+                "haxe")
+                    COMMAND="haxe --main ${algorithm^}_Run.hx --interp"
+                    if [ $TEST -eq 1 ]; then
+                        echo "> Running Haxe tests for $algorithm"
+                        haxe --main "${algorithm^}_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
+                        if [ $(echo $?) -ne 0 ]; then
+                            exit 1
+                        fi
+                    fi
+                    ;;
+                *)
+                    echo "($language) has no compilation steps. Did you forget to update the benchmark script?"
+                    ;;
+            esac
+
+            if [ $BENCHMARK -eq 1 ]; then
+                reset_globals
+                for count in $(eval echo {1..$RUNS}); do
+                    echo -ne "[${language}/${algorithm}-$(seq -f "%0${#RUNS}g" $count $count)]\t...\r"
+                    # https://stackoverflow.com/questions/23564995/how-to-modify-a-global-variable-within-a-function-in-bash
+                    readarray -d " " -t TIME_FNC <<< $(time_taken ${COMMAND})
+                    update_globals ${TIME_FNC[@]}
+                    if [ $VERBOSE -eq 1 ]; then
+                        echo -e "${language}|${algorithm}|$(seq -f "%0${#RUNS}g" $count $count)|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                        reset_globals
+                    fi
+                done
+                echo -e "[${language}/${algorithm}-$(seq -f "%0${#RUNS}g" ${RUNS} ${RUNS})]\t...${TIME_TAKEN}s"
+                if [ $VERBOSE -eq 0 ]; then
+                    GLOBAL_AVERAGE_CPU=$(( $GLOBAL_AVERAGE_CPU / $RUNS))
+                    GLOBAL_AVERAGE_RSS=$(( $GLOBAL_AVERAGE_RSS / $RUNS))
+                    GLOBAL_AVERAGE_VMS=$(( $GLOBAL_AVERAGE_VMS / $RUNS))
+                    SCORE=$(( $SCORE / $RUNS))
+                    echo -e "${language}|${algorithm}|${RUNS}|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                fi
+                TIME_TAKEN=0
+            fi
+            cd ..
+            sleep $INTERVAL
+        done
+        cd ..
+    done
+    cd $PROGRAMS_DIR
+}
+
+# Runs the markdown parser
+#
+# Parameters:
+#   N/A
+# Returns:
+#   N/A
+function bench_markdowns() {
+    cd $MARKDOWN_DIR
+    for language in "${MARKDOWNS[@]}"; do
+        cd $language
         case $language in
-            "rust")
-                rustc "${algorithm}_run.rs" -o "${algorithm}_run"
-                COMMAND="./${algorithm}_run"
-                if [ $TEST -eq 1 ]; then
-                    echo "> Running Rust tests for $algorithm"
-                    rustc --test "${algorithm}_test.rs" -o "${algorithm}_test"
-                    ./${algorithm}_test
-                    if [ $(echo $?) -ne 0 ]; then
-                        exit 1
-                    fi
-                fi
-                ;;
-            "go")
-                go build -o "${algorithm}_run" .
-                COMMAND="./${algorithm}_run"
-                if [ $TEST -eq 1 ]; then
-                    echo "> Running Go tests for $algorithm"
-                    go test "${algorithm}_test.go"
-                    if [ $(echo $?) -ne 0 ]; then
-                        exit 1
-                    fi
-                fi
-                ;;
-            "java")
-                javac -cp .:$JUNIT:$HAMCREST *.java
-                COMMAND="java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_run"
-                if [ $TEST -eq 1 ]; then
-                    echo "> Running Java tests for $algorithm"
-                    java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_test
-                    if [ $(echo $?) -ne 0 ]; then
-                        exit 1
-                    fi
-                fi
-                ;;
-            "c")
-                # TODO: Try to implement both the normal executable and the -O2 optimisation
-                gcc -Wall -c "${algorithm}.c" "${algorithm}_run.c"
-                gcc -o "${algorithm}_run" "${algorithm}.o" "${algorithm}_run.o"
-                COMMAND="./${algorithm}_run"
-                if [ $TEST -eq 1 ]; then
-                    echo "> Running C tests for $algorithm"
-                    gcc -Wall -c "${algorithm}.c" "${algorithm}_test.c" $UNITY
-                    gcc -o "${algorithm}_test" "${algorithm}.o" "${algorithm}_test.o" "unity.o"
-                    ./${algorithm}_test
-                    if [ $(echo $?) -ne 0 ]; then
-                        exit 1
-                    fi
-                fi
-                ;;
             "python")
-                COMMAND="python ${algorithm}_run.py"
+                COMMAND="python markdown_parser.py --demo"
                 if [ $TEST -eq 1 ]; then
-                    echo "> Running Python tests for $algorithm"
+                    echo "> Running Python tests for markdown parser"
                     pytest .
                     if [ $(echo $?) -ne 0 ]; then
                         exit 1
@@ -409,40 +486,62 @@ for language in "${LANGUAGES[@]}"; do
                 fi
                 ;;
             "haxe")
-                COMMAND="haxe --main ${algorithm^}_Run.hx --interp"
+                COMMAND="haxe --run Markdown_Parser.hx --demo"
                 if [ $TEST -eq 1 ]; then
-                    echo "> Running Haxe tests for $algorithm"
-                    haxe --main "${algorithm^}_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
+                    echo "> Running Haxe tests for markdown parser"
+                    haxe --main "Markdown_Parser_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
                     if [ $(echo $?) -ne 0 ]; then
                         exit 1
                     fi
                 fi
+                ;;
+            *)
+                echo "($language) has no compilation steps. Did you forget to update the benchmark script?"
                 ;;
         esac
 
         if [ $BENCHMARK -eq 1 ]; then
             reset_globals
             for count in $(eval echo {1..$RUNS}); do
-                echo -ne "[${language}/${algorithm}-$(seq -f "%0${#RUNS}g" $count $count)]\t...\r"
+                echo -ne "[${language}/markdown-parser-$(seq -f "%0${#RUNS}g" $count $count)]\t...\r"
                 # https://stackoverflow.com/questions/23564995/how-to-modify-a-global-variable-within-a-function-in-bash
                 readarray -d " " -t TIME_FNC <<< $(time_taken ${COMMAND})
                 update_globals ${TIME_FNC[@]}
                 if [ $VERBOSE -eq 1 ]; then
-                    echo -e "${language}|${algorithm}|$(seq -f "%0${#RUNS}g" $count $count)|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                    echo -e "${language}|markdown-parser|$(seq -f "%0${#RUNS}g" $count $count)|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
                     reset_globals
                 fi
             done
-            echo -e "[${language}/${algorithm}-$(seq -f "%0${#RUNS}g" ${RUNS} ${RUNS})]\t...${TIME_TAKEN}s"
+            echo -e "[${language}/markdown-parser-$(seq -f "%0${#RUNS}g" ${RUNS} ${RUNS})]\t...${TIME_TAKEN}s"
             if [ $VERBOSE -eq 0 ]; then
-                echo -e "${language}|${algorithm}|${RUNS}|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                GLOBAL_AVERAGE_CPU=$(( ${GLOBAL_AVERAGE_CPU} / $RUNS))
+                GLOBAL_AVERAGE_RSS=$(( ${GLOBAL_AVERAGE_RSS} / $RUNS))
+                GLOBAL_AVERAGE_VMS=$(( ${GLOBAL_AVERAGE_VMS} / $RUNS))
+                SCORE=$(( ${SCORE} / $RUNS))
+                echo -e "${language}|markdown-parser|${RUNS}|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
             fi
             TIME_TAKEN=0
         fi
         cd ..
         sleep $INTERVAL
     done
-done
-cd $PROGRAMS_DIR
+    cd $CURRENT_DIR
+}
+
+# TODO: Add --clean flag to cleanup compiled files
+# FILES_TO_CLEANUP = ()
+TIME_TAKEN=0
+cat /dev/null > $BENCHMARKS_FILE
+echo -e "LANGUAGE|ALGORITHM|RUN|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)|SCORE" >> $BENCHMARKS_FILE
+# ******************************************
+# ********** RUN THE TOY PROGRAMS **********
+# ******************************************
+bench_toy_programs
+
+# ******************************************
+# ******** RUN THE MARKDOWN PARSERS ********
+# ******************************************
+bench_markdowns
 
 if [ $BENCHMARK -eq 1 ]; then
     BENCHMARKS_FILE_B="${BENCHMARKS_FILE}_B"

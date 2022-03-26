@@ -1,18 +1,14 @@
-LANGUAGE  ALGORITHM  RUN  ELAPSED (s)  Avg. CPU (%)  Avg. RSS (KB)  Avg. VMS (KB)  SCORE
-rust      sieve      1    2            63            904            2130           330
-rust      sieve      2    4            63            936            2130           330
-go        sieve      1    1            10            1344           351316         820
-go        sieve      2    2            10            1344           351188         820
-java      sieve      1    1            15            2922           13192          690
-java      sieve      2    2            14            2924           13192          720
-c         sieve      1    1            11            258            1246           920
-c         sieve      2    2            10            288            1246           940
-python    sieve      1    5            83            7630           12154          130
-python    sieve      2    9            78            7307           11550          130
-haxe      sieve      1    1            1             4336           11224          3500
-haxe      sieve      2    2            1             4842           11224          3500
+LANGUAGE  ALGORITHM        RUN  ELAPSED (s)  Avg. CPU (%)  Avg. RSS (KB)  Avg. VMS (KB)  SCORE
+rust      sieve            10   28.699664    5307          112474         304986         230
+go        sieve            10   20.549223    586           156977         35932663       727
+java      sieve            10   20.565989    729           662307         24069962       608
+c         sieve            10   20.555779    613           29454          127875         821
+python    sieve            10   35.822788    6427          516759         1106586        158
+haxe      sieve            10   54.184947    8247          3488081        4058379        80
+python    markdown-parser  10   10.383249    102           167823         486129         3470
+haxe      markdown-parser  10   20.548773    511           1368331        1804429        800
 
-CPU:            AMD Ryzen 7 5700U
-Processors:     8 Cores / 16 Threads
-Memory:         ~7 GB
-Average Score:  65149
+CPU:            AMD Ryzen 9 3900X
+Processors:     12 Cores / 24 Threads
+Memory:         ~15 GB
+Average Score:  861
