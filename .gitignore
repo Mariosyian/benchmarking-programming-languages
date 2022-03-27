@@ -6,3 +6,7 @@
 .coverage
 # Python cache
 __pycache__/
+# C output files
+*.o
+# Benchmark outpout
+benchmarks/
