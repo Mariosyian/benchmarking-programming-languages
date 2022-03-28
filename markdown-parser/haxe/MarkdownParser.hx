@@ -33,13 +33,11 @@ class MarkdownParser {
      */    
     public function new(content: String = "", string: Bool = false, stdout: Bool = false) {
         if (StringTools.trim(content) == "" && !string) {
-            Sys.println("No file was provided.");
-            Sys.exit(1);
+            throw "No file was provided.";
         }
 
         if (!string && !sys.FileSystem.exists(content)) {
-            Sys.println("The file provided was not found.");
-            Sys.exit(1);
+            throw "The file provided was not found.";
         }
 
         blockquoteItem = false;
@@ -229,12 +227,10 @@ class MarkdownParser {
             if (regex != null) {
                 var link: Array<String> = regex.match.split("](");
                 var src: String = link[1].substring(0, link[1].length-1);
-                var text: String = "";
+                var text: String = link[0].substring(1, link[0].length);
                 if (specialChars.charAt(0) == "!") {
-                    text = link[0].substring(2, link[0].length);
                     rawHtml += '<img src="${src}" alt="${text}"/>';
                 } else {
-                    text = link[0].substring(1, link[0].length);
                     rawHtml += '<a href="${src}">${text}</a>';
                 }
 

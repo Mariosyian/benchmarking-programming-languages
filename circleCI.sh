@@ -21,7 +21,6 @@ do
                 cd "$PROGRAMS_DIR/go/$algorithm"
                 go run ${algorithm}_run.go $algorithm.go
             done
-            shift
             ;;
         --rust)
             shift
@@ -38,7 +37,6 @@ do
 
                 rm ${algorithm}_run ${algorithm}_test
             done
-            shift
             ;;
         --java)
             shift
@@ -52,7 +50,6 @@ do
 
                 java -cp $PROGRAMS_DIR/java/${algorithm}:$JUNIT:$HAMCREST ${algorithm}_test
             done
-            shift
             ;;
         --c)
             shift
@@ -71,7 +68,6 @@ do
 
                 rm ${algorithm}.o ${algorithm}_run.o ${algorithm}_test.o unity.o ${algorithm}_run ${algorithm}_test
             done
-            shift
             ;;
         --haxe)
             shift
@@ -92,7 +88,6 @@ do
 
                 $HAXE --main "${HAXE_ALGORITHM[*]^}_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
             done
-            shift
             ;;
     esac
 done

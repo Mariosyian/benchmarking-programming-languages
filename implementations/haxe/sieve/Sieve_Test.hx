@@ -57,10 +57,24 @@ class TestCase extends utest.Test {
 		for (N => elements in limits) {
 			var results:Array<Int> = sieve.sieve(N);
 			Assert.equals(results.length, elements.length);
+			// As suggested by https://haxe.org/manual/std-unit-testing.html#comparing-complex-objects
+			Assert.equals(Std.string(results), Std.string(elements));
+		}
+	}
 
-			for (i => result in results) {
-				Assert.equals(result, elements[i]);
-			}
+	public function testContainsCorrectlyIdentifiesElementThatExistsInTheArray() {
+		// Known list of prime numbers given the dictionary key as an upper bound.
+		var array:Array<Int> = [1, 2, 3, 4, 5];
+		for (element in array) {
+			Assert.isTrue(sieve.contains(array, element));
+		}
+	}
+
+	public function testContainsCorrectlyIdentifiesElementThatDoesntExistInTheArray() {
+		// Known list of prime numbers given the dictionary key as an upper bound.
+		var array:Array<Int> = [1, 2, 3, 4, 5];
+		for (element in [6, 7, 8, 9, 10]) {
+			Assert.isFalse(sieve.contains(array, element));
 		}
 	}
 }

@@ -14,98 +14,73 @@ class Markdown_Parser_Test {
 }
 
 class TestCase extends utest.Test {
-    public function testHelpMessageIsDisplayed() {
-        var message: String = '
-Shaved down version of the Common Mark markdown parser created as part of COMP30040.
-This version was written for Python3.
+    var parsedContentFilename: String = "parsed.html";
 
-usage: python markdown_parser.py <path/to/file> [--help] [--raw <markdown string>]
-                                                [--prettify] [--stdout] [--demo]
+// //     public function testThatTheHelpMessageIsDisplayed() {
+// //         var message: String = '
+// // Shaved down version of the Common Mark markdown parser created as part of COMP30040.
+// // This version was written for Python3.
 
-<path/to/file>: The file that contains markdown code. Ignored if the `--raw` flag is
-                used. Must be the first argument.
+// // usage: python markdown_parser.py <path/to/file> [--help] [--raw <markdown string>]
+// //                                                 [--prettify] [--stdout] [--demo]
 
---help: Display this help message and exit.
---raw: Provide a raw string of markdown content to be parsed into HTML.
---prettify: Prettify the output using BeautifulSoup4.
---stdout: Print the resulting HTML code to standard out instead of a file.
---demo: Uses a predefined raw string (implies the `--raw` flag) that uses all features
-        of the markdown parser.
+// // <path/to/file>: The file that contains markdown code. Ignored if the `--raw` flag is
+// //                 used. Must be the first argument.
 
-Example usage:
-- Raw string
-python markdown_parser.py --raw "# An h1 header with *bold text*." --stdout
-- File
-python markdown_parser.py ./markdown.md --prettify
+// // --help: Display this help message and exit.
+// // --raw: Provide a raw string of markdown content to be parsed into HTML.
+// // --prettify: Prettify the output using BeautifulSoup4.
+// // --stdout: Print the resulting HTML code to standard out instead of a file.
+// // --demo: Uses a predefined raw string (implies the `--raw` flag) that uses all features
+// //         of the markdown parser.
 
-Exit Codes:
-0 - OK
-1 - Erroneous input
+// // Example usage:
+// // - Raw string
+// // python markdown_parser.py --raw "# An h1 header with *bold text*." --stdout
+// // - File
+// // python markdown_parser.py ./markdown.md --prettify
 
-Author: Marios Yiannakou, GitHub: @Mariosyian';
+// // Exit Codes:
+// // 0 - OK
+// // 1 - Erroneous input
+
+// // Author: Marios Yiannakou, GitHub: @Mariosyian';
     
-        // FIX
-        // with patch.object(sys, "argv", "--help") {
-        //     with patch.object(md, "__name__", "__main__") {
-        //         assert "--help" in sys.argv
-        //         runpy.run_module(
-        //             "markdown_parser",
-        //         )
-        //         assert capsys.readouterr().out == message
-        //     }
-        // }
-        Assert.isTrue(false);
-    }
+// //         // FIX
+// //         // with patch.object(sys, "argv", "--help") {
+// //         //     with patch.object(md, "__name__", "__main__") {
+// //         //         assert "--help" in sys.argv
+// //         //         runpy.run_module(
+// //         //             "markdown_parser",
+// //         //         )
+// //         //         assert capsys.readouterr().out == message
+// //         //     }
+// //         // }
+// //         Assert.fail("Not implemented");
+// //     }
 
 
-    public function testThatProgramExitsWithCode1WhenNoContentAndNoString() {
-        var message: String = "No file was provided.\n";
+    public function testThatTheProgramExitsDueToErrorWhenNoContentAndNoString() {
         try {
             new MarkdownParser("", false);
-            Assert.isTrue(false);
+            // Shouldn't reach this line due to an error
+            Assert.fail("Shouldn't reach this point");
         } catch (e: Any) {
-            Sys.stderr().writeString('Error <<$e>>');
             Assert.isTrue(true);
         }
-        // assert exit_code.value.code == 1
-        // captured = capsys.readouterr()
-        // assert captured.out == message
     }
 
-
-    public function testThatProgramExitsWithCode1WhenNoContentButString() {
-        var message: String = "No markdown string was provided.\n";
-        // with pytest.raises(SystemExit) as exit_code {
+    public function testThatTheProgramExitsDueToErrorWhenTheFileDoesntExist() {
         try {
-            new MarkdownParser("", true);
-            Assert.isTrue(false);
+            new MarkdownParser("File name that doesn't exist", false);
+            Assert.fail("Shouldn't reach this point");
         } catch(e: Any) {
             Assert.isTrue(true);
         }
-
-        // assert exit_code.value.code == 1
-        // captured = capsys.readouterr()
-        // assert captured.out == message
-    }
-
-
-    public function testThatProgramExitsWithCode1WhenTheFileDoesntExist() {
-        var message: String = "The file provided was not found.\n";
-        try {
-            new MarkdownParser("Hello there!", false);
-            Assert.isTrue(false);
-        } catch(e: Any) {
-            Assert.isTrue(true);
-        }
-
-        // assert exit_code.value.code == 1
-        // captured = capsys.readouterr()
-        // assert captured.out == message
     }
 
 
     public function testThatTheParserProducesTheCorrectHtmlAndPrintsToStdout() {
-            
         var map: Array<Array<String>> = [
             [
                 "**this is bold**",
@@ -181,20 +156,21 @@ Author: Marios Yiannakou, GitHub: @Mariosyian';
 
                     ![woohoo](image)
                 ',
-                '<b>this is bold</b><i>this is italic</i><b><i>this is both</i></b><h4> This should be an h4 header</h4>\n<p style="text-decoration: underline;">This should be underlined</p><p>\nThis should be normal\n</p>\n<a href="foo.bar">Foo-Bar</a><blockquote>\n<p> This is a blockquote</p>\n\n</blockquote>\n<ul>\n<li> This is a single item unordered list.</li>\n\n</ul>\n<ol>\n<li> This is a single item ordered list.</li>\n\n</ol>\n<img src="image" alt="woohoo"/>',
+                '<b>this is bold</b><i>this is italic</i><b><i>this is both</i></b><h4> This should be an h4 header</h4>\n<p style="text-decoration: underline;">This should be underlined</p><p>\nThis should be normal</p>\n<a href="foo.bar">Foo-Bar</a><blockquote>\n<p> This is a blockquote</p>\n</blockquote>\n<ul>\n<li> This is a single item unordered list.</li>\n</ul>\n<ol>\n<li> This is a single item ordered list.</li>\n</ol>\n<img src="image" alt="woohoo"/>',
             ]
         ];
         for (test in map) {
             var markdown: String = test[0];
             var parsedHtml: String = test[1];
-            var html: String = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="author" content="Marios Yiannakou">\n<meta name="description" content="This is a markdown parser to HTML created for my COMP30040 module at the University of Manchester.">\n</head>\n<body>\n${parsedHtml}\n</body>\n</html>';
-            new MarkdownParser(markdown, true, true);
-            // assert capsys.readouterr().out.strip() == html.strip()
+            var html: String = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="author" content="Marios Yiannakou">\n<meta name="description" content="This is a markdown parser to HTML created for my COMP30040 module at the University of Manchester.">\n</head>\n<body>\n${parsedHtml}\n</body>\n</html>\n';
+            new MarkdownParser(markdown, true, false);
+            // TODO: Need a more concrete way. Reading stdout directly?
+            // Write results to a file and read the file
+            Assert.equals(html, sys.io.File.getContent(parsedContentFilename));
         }
-        Assert.isTrue(true);
     }
 
-    public function test_that_the_parser_catches_invalid_markdown() {
+    public function testThatTheParserCatchesInvalidMarkdown() {
         var map: Array<Array<String>> = [
             [
                 "**this is not bold*",
@@ -236,20 +212,22 @@ Author: Marios Yiannakou, GitHub: @Mariosyian';
         for (test in map) {
             var markdown: String = test[0];
             var parsedHtml: String = test[1];
-            var html: String = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="author" content="Marios Yiannakou">\n<meta name="description" content="This is a markdown parser to HTML created for my COMP30040 module at the University of Manchester.">\n</head>\n<body>\n${parsedHtml}\n</body>\n</html>';
-            new MarkdownParser(markdown, true, true);
-            // assert capsys.readouterr().out.strip() == html.strip()
+            var html: String = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="author" content="Marios Yiannakou">\n<meta name="description" content="This is a markdown parser to HTML created for my COMP30040 module at the University of Manchester.">\n</head>\n<body>\n${parsedHtml}\n</body>\n</html>\n';
+            new MarkdownParser(markdown, true, false);
+            // TODO: Need a more concrete way. Reading stdout directly?
+            // Write results to a file and read the file
+            Assert.equals(html, sys.io.File.getContent(parsedContentFilename));
         }
-        Assert.isTrue(true);
     }
 
 
     public function testThatTheParserTreatsUnknownSpecialCharactersAsInvalidMarkdown() {
         var markdown: String = "£";
         var parsedHtml: String = "<p>\n£\n</p>";
-        var html: String = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="author" content="Marios Yiannakou">\n<meta name="description" content="This is a markdown parser to HTML created for my COMP30040 module at the University of Manchester.">\n</head>\n<body>\n${parsedHtml}\n</body>\n</html>';
-        new MarkdownParser(markdown, true, true);
-        // assert capsys.readouterr().out.strip() == html.strip()
-        Assert.isTrue(true);
+        var html: String = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="author" content="Marios Yiannakou">\n<meta name="description" content="This is a markdown parser to HTML created for my COMP30040 module at the University of Manchester.">\n</head>\n<body>\n${parsedHtml}\n</body>\n</html>\n';
+        new MarkdownParser(markdown, true, false);
+        // TODO: Need a more concrete way. Reading stdout directly?
+        // Write results to a file and read the file
+        Assert.equals(html, sys.io.File.getContent(parsedContentFilename));
     }
 }
