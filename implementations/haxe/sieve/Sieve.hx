@@ -43,6 +43,20 @@ class Sieve {
 	}
 
 	/**
+		Checks if the given element exists in the given array.
+
+		input:
+			- array: The array to be checked against.
+			- element: The element to be checked.
+
+		returns:
+			True if the element exists in the array, false otherwise.
+	**/
+	public function contains(array:Array<Int>, element:Int):Bool {
+		return array.indexOf(element) != -1;
+	}
+
+	/**
 		Checks all integer numbers from 2 up to, and including, `upper_bound` and
 		computes all the prime numbers, then returns them.
 
@@ -69,7 +83,7 @@ class Sieve {
 		for (i in (2...(upper_bound + 1))) {
 			for (j in 0...i) {
 				var current_num:Int = i * j;
-				if ((current_num > upper_bound) || non_primes.contains(current_num)) {
+				if ((current_num > upper_bound) || contains(non_primes, current_num)) {
 					continue;
 				}
 

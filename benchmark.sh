@@ -1,20 +1,23 @@
 #!/bin/bash
 # Author: Marios Yiannakou
 #
-# Runs all benchmarks in the `implementations` directory sequentially, and creates a report inside `benchmarks`.
+# Runs all benchmarks in the `implementations` and `markdown-parser` directories sequentially,
+# and creates a report inside `benchmarks`.
 #
 # Usage:
-# - Navigate to the repository's root directory.
+# - Navigate to the repositorys root directory.
 # - Run the `benchmark.sh` script.
 #
 # Contributing:
+# Toy programs
+# ------------
 # Each language has it's own directory, and each algorithm/program has it's own sub-directory
 #   inside the appropriate language directory. Please ensure that each program is consistently
 #   named across all directories (e.g. The prime sieve program is under a directory called
 #   `sieve` regardless of the language implementing it).
-# Each algorithm should have three files (at least) associated with it:
+# Each algorithm should have (at least) three files associated with it:
 #   - A file that is named after the algorithm itself containing the logic.
-#   - A file with the `_test` postfix to indicate this is the test file
+#   - A file with the `_test` postfix to indicate this is the test file.
 #   - A file with the `_run` postfix which is a file that imports and calls the algorithm.
 #   - Optional: Any helper libraries required to run the algorithm.
 #
@@ -36,6 +39,37 @@
 # |__ c
 # ...
 #
+# Markdown Parser
+# ---------------
+# Each language has it's own directory. Please ensure that each program is consistently
+#   named across all directories (i.e. `markdown_parser`) with only the case being different
+#   according to a languages specifications (e.g. Haxe requires capitalised words).
+# Each algorithm should have (at least) two files associated with it:
+#   - A file that is named according to the specification mentioned above which either
+#       runs the markdown parser, or calls a file that runs the markdown parser.
+#   - A file with the `_test` postfix to indicate this is the test file.
+#   - Optional: Any helper libraries required to run the algorithm.
+#
+# Example directory structure
+# markdown-parser
+# |
+# |__ python
+# |   |
+# |   |__ markdown_parser.py        <-- The file to be run
+# |   |
+# |   |__ markdown_parser_test.py   <-- Make sure to test your solutions!
+# |
+# |__ haxe
+# |   |
+# |   |__ Markdown_Parser.hx        <-- The file to be run
+# |   |
+# |   |__ Markdown_Parser_Test.hx   <-- Make sure to test your solutions!
+# |   |
+# |   |__ MarkdownParser.hx         <-- The markdown parser implementation
+# ...
+#
+# -------------------------------------------------------------------------------------------------
+#
 # For existing languages:
 # - If a solution exists for the language and algorithm you wish to create, replace the existing
 #   one with your own locally and run the benchmark against it. If the score is higher, or any
@@ -51,8 +85,15 @@
 #
 # To include any new language/algorithm in the benchmark you will need to update this script to
 #   recognise, and run it:
-#   - Include your language in the LANGUAGES list / algorithm in the ALGORITHMS list.
-#   - Update the EXTENSIONS list with a key:value pair of the language:file extension
+#   - Toy programs
+#       - Make sure your language is included in the LANGUAGES list.
+#           - In the case of a new language update the case statement with any
+#               compilation steps and the command required to run the algorithm.
+#       - Include your algorithm in the ALGORITHMS list.
+#   - Markdown parser
+#       - Make sure your language is included in the MARKDOWNS list.
+#           - In the case of a new language update the case statement with any
+#               compilation steps and the command required to run the algorithm.
 #
 # Exit values:
 #   0 - OK
@@ -62,7 +103,7 @@
 CURRENT_DIR=$(pwd)
 PROGRAMS_DIR="${CURRENT_DIR}/implementations"
 BENCHMARKS_DIR="${CURRENT_DIR}/benchmarks"
-BENCHMARKS_FILE="${BENCHMARKS_DIR}/benchmarks_$(date +%F_%R)"
+BENCHMARKS_FILE="${BENCHMARKS_DIR}/$(date +%F_%H%M)"
 MARKDOWN_DIR="${CURRENT_DIR}/markdown-parser"
 
 DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
@@ -80,7 +121,7 @@ INTERVAL=1
 # Capture any CL flags provided
 BENCHMARK=1
 DISPLAY=0
-RUNS=10
+RUNS=100
 TEST=0
 VERBOSE=0
 CSV=0
@@ -103,17 +144,23 @@ while test $# -gt 0; do
         echo "written in the implementations directory. The script compiles and runs"
         echo "all language implementations of one algorithm, before moving to the next."
         echo ""
-        echo "Usage: ./benchmarks.sh [--csv] [-d|--display-report] [-h|--help] [-r 10|--runs 10] [-t|--test] [-v|--verbose] [--test-and-benchmark]"
+        echo "Usage: ./benchmarks.sh [--csv] [-d|--display-report] [-h|--help] [-n|--name <file_name>] [-r 100|--runs 100] [-t|--test] [-v|--verbose] [--test-and-benchmark]"
         echo ""
         echo "Options:"
         echo "--csv                 save the benchmark results as a CSV file"
         echo "-d, --display-report  display the benchmark report after completion"
         echo "-h, --help            show this help message and exit"
-        echo "-r, --runs            the amount of times to run each algorithm. Defaults to 10"
+        echo "-n, --name            change the name of the output file. Defaults to the current datetime"
+        echo "-r, --runs            the amount of times to run each algorithm. Defaults to 100"
         echo "-t, --test            run tests for all algorithms without benchmarking (exits if any tests fail)"
         echo "-v, --verbose         save the report for each run of each algorithm instead of their final average"
         echo "--test-and-benchmark  run tests and benchmarks for all algorithms (exits if any tests fail)"
         exit 0
+        ;;
+    -n|--name)
+        shift
+        BENCHMARKS_FILE="${BENCHMARKS_DIR}/$1"
+        shift
         ;;
     -r|--runs)
         shift
@@ -234,18 +281,18 @@ function time_taken() {
 
     # Get the command output and cut the top line (header line)
     { python $SYRUPY -S -C --no-raw-process-log "$@" 2> $TEMP_TIME_FILE; } | sed 1d > $TEMP_FILE
-    # TODO: New benchmark tool `/usr/bin/time`
-    # /usr/bin/time -f "Unshared:%D\nElapsed real time (s):%e\nAvg Total Mem: %K\nMax RSS: %M\nAvg RSS: %t\nCPU%%: %P\nCPU sec (sys):%S\nCPU sec (usr):%U"
-    # Unshared:0, Elapsed real time (s):171.79, Avg Total Mem: 0, Max RSS: 183932, Avg RSS: 0, CPU%: 46%, CPU sec (sys):2.86, CPU sec (usr):77.24
 
     LAST_LINE=$(tail $TEMP_FILE -n 1)
-    ELAPSED_TIME=$(echo $LAST_LINE | awk '{print $4}')
-    readarray -d ":" -t ELAPSED_TIME_ARR <<< $ELAPSED_TIME
-    ELAPSED_TIME=$((${ELAPSED_TIME_ARR[0]} * 60 + ${ELAPSED_TIME_ARR[1]}))
-    # ELAPSED_TIME_HOURS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $5}')
-    # ELAPSED_TIME_MINUTES=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $7}')
-    # ELAPSED_TIME_SECONDS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $9}')
-    # ELAPSED_TIME=$(bc <<< "$ELAPSED_TIME_HOURS * 3600 + $ELAPSED_TIME_MINUTES * 60 + $ELAPSED_TIME_SECONDS")
+    ELAPSED_TIME_HOURS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $5}')
+    ELAPSED_TIME_MINUTES=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $7}')
+    ELAPSED_TIME_SECONDS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $9}')
+    ELAPSED_TIME=$(bc <<< "$ELAPSED_TIME_HOURS * 3600 + $ELAPSED_TIME_MINUTES * 60 + $ELAPSED_TIME_SECONDS")
+    # Offset 'Total run time' with the 'real' time the program run for
+    # This is to get rough estimate at a higher accuracy, rather than the run time at second accuracy
+    ESTIMATE_TIME=$(echo $LAST_LINE | awk '{print $4}')
+    readarray -d ":" -t ESTIMATE_TIME_ARR <<< $ESTIMATE_TIME
+    ESTIMATE_TIME=$((${ESTIMATE_TIME_ARR[0]} * 60 + ${ESTIMATE_TIME_ARR[1]}))
+    ELAPSED_TIME=$(bc <<< "$ELAPSED_TIME - ($(float_to_int $ELAPSED_TIME) - $ESTIMATE_TIME)")
 
     LOCAL_AVERAGE_CPU=$(float_to_int $(echo $LAST_LINE | awk '{print $5}'))
     LOCAL_AVERAGE_RSS=$(echo $LAST_LINE | awk '{print $7}')
@@ -299,8 +346,7 @@ function time_taken() {
     # - Average VMS contributes to 10% (lower is better)
     #   - 100% = <=6000 ?? Based on algorithm ??
     #   - 0% = >=100,000
-    TIME_SCORE=$(((10 / $ELAPSED_TIME) * 50))
-    # TIME_SCORE=$(bc <<< "(10 / $ELAPSED_TIME) * 50")
+    TIME_SCORE=$(bc <<< "(10 / $ELAPSED_TIME) * 50")
     CPU_SCORE=$(((100 / $LOCAL_AVERAGE_CPU) * 30))
     RSS_SCORE=$(((3000 / $LOCAL_AVERAGE_RSS) * 10))
     VMS_SCORE=$(((6000 / $LOCAL_AVERAGE_VMS) * 10))
@@ -323,8 +369,7 @@ function time_taken() {
 # Returns:
 #   N/A
 function update_globals() {
-    TIME_TAKEN=$(($TIME_TAKEN + $1))
-    # TIME_TAKEN=$(bc <<< "$TIME_TAKEN + $1")
+    TIME_TAKEN=$(bc <<< "$TIME_TAKEN + $1")
     GLOBAL_AVERAGE_CPU=$(($GLOBAL_AVERAGE_CPU + $2))
     GLOBAL_AVERAGE_RSS=$(($GLOBAL_AVERAGE_RSS + $3))
     GLOBAL_AVERAGE_VMS=$(($GLOBAL_AVERAGE_VMS + $4))
@@ -383,7 +428,7 @@ function bench_toy_programs() {
                     COMMAND="./${algorithm}_run"
                     if [ $TEST -eq 1 ]; then
                         echo "> Running Go tests for $algorithm"
-                        go test "${algorithm}_test.go"
+                        go test
                         if [ $(echo $?) -ne 0 ]; then
                             exit 1
                         fi
@@ -597,6 +642,8 @@ if [ $BENCHMARK -eq 1 ] && [ $CSV -eq 0 ]; then
     echo -e "Memory:         ~$(get_ram_in_gb) GB" >> $BENCHMARKS_FILE_B
     echo -e "Average Score:  $AVERAGE_SCORE" >> $BENCHMARKS_FILE_B
 
+    # Reading and writing to the same file at the same time causes data corruption
+    # and an empty file.
     mv $BENCHMARKS_FILE_B $BENCHMARKS_FILE
 
     echo "Results written to $BENCHMARKS_FILE"

@@ -73,21 +73,24 @@ jobs:
             # No format check as C default formatting is inconsistent with the rest and I don't like it.
             - run: echo "Compiling, building, and testing ..."
             - run: $(pwd)/circleCI.sh --c
-    # haxe:
-    #     docker:
-    #         - image: cimg/base:2021.12
-    #     steps:
-    #         - checkout
-    #         - run: wget https://github.com/HaxeFoundation/haxe/releases/download/4.2.4/haxe-4.2.4-linux64.tar.gz
-    #         - run: tar xfvz haxe-4.2.4-linux64.tar.gz
-    #         - run: wget https://github.com/HaxeFoundation/neko/releases/download/v2-3-0/neko-2.3.0-linux64.tar.gz
-    #         - run: tar xfvz neko-2.3.0-linux64.tar.gz
-    #         - run: sudo ln -s $(pwd)/neko-2.3.0-linux64/neko /bin/neko
-    #         - run: sudo apt install haxe -y
-    #         - run: haxelib install utest
-    #         - run: haxelib install formatter
-    #         - run: echo "Checking formatting, compiling, building, and testing ..."
-    #         - run: $(pwd)/circleCI.sh --haxe
+    haxe:
+        docker:
+            - image: cimg/base:2021.12
+        steps:
+            - checkout
+            - run: wget https://github.com/HaxeFoundation/haxe/releases/download/4.2.4/haxe-4.2.4-linux64.tar.gz
+            - run: tar xfvz haxe-4.2.4-linux64.tar.gz
+            - run: sudo ln -s $(pwd)/haxe_20211022152000_ab0c054/haxe /bin/haxe
+            - run: sudo ln -s $(pwd)/haxe_20211022152000_ab0c054/haxelib /bin/haxelib
+            # - run: wget https://github.com/HaxeFoundation/neko/releases/download/v2-3-0/neko-2.3.0-linux64.tar.gz
+            # - run: tar xfvz neko-2.3.0-linux64.tar.gz
+            # - run: sudo ln -s $(pwd)/neko-2.3.0-linux64/neko /bin/neko
+            - run: sudo apt update && sudo apt upgrade -y && sudo apt install neko -y
+            - run: haxelib setup .
+            - run: haxelib install utest
+            - run: haxelib install formatter
+            - run: echo "Checking formatting, compiling, building, and testing ..."
+            - run: $(pwd)/circleCI.sh --haxe
 
 # Invoke jobs via workflows
 workflows:
@@ -98,4 +101,4 @@ workflows:
             - rust
             - java
             - c
-            # - haxe
+            - haxe
