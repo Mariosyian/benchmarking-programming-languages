@@ -99,6 +99,7 @@
 #   0 - OK
 #   1 - Test failure
 #   2 - Erroneous input
+#   3 - Not found
 
 CURRENT_DIR=$(pwd)
 PROGRAMS_DIR="${CURRENT_DIR}/implementations"
@@ -111,10 +112,6 @@ SYRUPY="${DEPENDENCIES_DIR}/syrupy/syrupy.py"
 JUNIT="${DEPENDENCIES_DIR}/junit/junit-4.10.jar"
 HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
 UNITY="${DEPENDENCIES_DIR}/unity/unity.c"
-
-LANGUAGES=(rust go java c python haxe)
-ALGORITHMS=(sieve)
-MARKDOWNS=(python haxe)
 
 INTERVAL=1
 
@@ -208,15 +205,15 @@ function float_to_int() {
 # Returns:
 #   The brand and model of the current machine.
 function get_cpu_name() {
-    CPU_MODEL=$(cat /proc/cpuinfo | grep 'model name' | head -n 1 | awk '{for (i=4;i<=NF;i++) printf "%s ", $i}')
-    CPU_BRAND=$(echo $CPU_MODEL | awk '{print $1}')
+    CPU_MODEL=$(grep 'model name' /proc/cpuinfo | head -n 1 | awk '{for (i=4;i<=NF;i++) printf "%s ", $i}')
+    CPU_BRAND=$(echo "$CPU_MODEL" | awk '{print $1}')
 
     if [ $CPU_BRAND == "AMD" ]; then
-        echo $CPU_MODEL | awk '{printf "%s %s %s %s\n", $1, $2, $3, $4}'
+        echo "$CPU_MODEL" | awk '{printf "%s %s %s %s\n", $1, $2, $3, $4}'
     elif [ $CPU_BRAND == "Intel(R)" ]; then
-        echo $CPU_MODEL | awk '{printf "%s %s %s %s %s\n", $1, $2, $3, $4, $5}'
+        echo "$CPU_MODEL" | awk '{printf "%s %s %s %s %s\n", $1, $2, $3, $4, $5}'
     else
-        echo $CPU_MODEL
+        echo "$CPU_MODEL"
     fi
 }
 
@@ -228,7 +225,7 @@ function get_cpu_name() {
 # Returns:
 #   The number of logical processors (threads) of the host machine.
 function get_num_of_processors() {
-    NUM_OF_CORES=$(cat /proc/cpuinfo | grep 'processor' | tail -n 1 | awk '{print $3}')
+    NUM_OF_CORES=$(grep 'processor' /proc/cpuinfo | tail -n 1 | awk '{print $3}')
     echo $(($NUM_OF_CORES + 1))
 }
 
@@ -240,7 +237,7 @@ function get_num_of_processors() {
 # Returns:
 #   The number of physical processors (cores) of the host machine.
 function get_num_of_cores() {
-    echo $(cat /proc/cpuinfo  | grep 'core id' | sort | uniq | wc -l)
+    echo $(grep 'core id' /proc/cpuinfo | sort | uniq | wc -l)
 }
 
 # Retrieves the total amount of RAM of the host machine from the
@@ -251,7 +248,7 @@ function get_num_of_cores() {
 # Returns:
 #   The amount of primary memory of the host machine in GBs.
 function get_ram_in_gb() {
-    MEMORY_IN_kB=$(cat /proc/meminfo | grep 'MemTotal' | awk '{print $2}')
+    MEMORY_IN_kB=$(grep 'MemTotal' /proc/meminfo | awk '{print $2}')
     echo $(($MEMORY_IN_kB / 1024 / 1024))
 }
 
@@ -280,55 +277,55 @@ function time_taken() {
     TEMP_TIME_FILE="tmp_time"
 
     # Get the command output and cut the top line (header line)
-    { python $SYRUPY -S -C --no-raw-process-log "$@" 2> $TEMP_TIME_FILE; } | sed 1d > $TEMP_FILE
+    { python $SYRUPY -S -C --no-raw-process-log $@ 2> $TEMP_TIME_FILE; } | sed 1d > $TEMP_FILE
 
     LAST_LINE=$(tail $TEMP_FILE -n 1)
-    ELAPSED_TIME_HOURS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $5}')
-    ELAPSED_TIME_MINUTES=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $7}')
-    ELAPSED_TIME_SECONDS=$(cat $TEMP_TIME_FILE | grep "Total run time" | awk '{print $9}')
-    ELAPSED_TIME=$(bc <<< "$ELAPSED_TIME_HOURS * 3600 + $ELAPSED_TIME_MINUTES * 60 + $ELAPSED_TIME_SECONDS")
+    ELAPSED_TIME_HOURS=$(grep "Total run time" $TEMP_TIME_FILE | awk '{print $5}')
+    ELAPSED_TIME_MINUTES=$(grep "Total run time" $TEMP_TIME_FILE | awk '{print $7}')
+    ELAPSED_TIME_SECONDS=$(grep "Total run time" $TEMP_TIME_FILE | awk '{print $9}')
+    elapsed_time=$(bc <<< "$ELAPSED_TIME_HOURS * 3600 + $ELAPSED_TIME_MINUTES * 60 + $ELAPSED_TIME_SECONDS")
     # Offset 'Total run time' with the 'real' time the program run for
     # This is to get rough estimate at a higher accuracy, rather than the run time at second accuracy
-    ESTIMATE_TIME=$(echo $LAST_LINE | awk '{print $4}')
-    readarray -d ":" -t ESTIMATE_TIME_ARR <<< $ESTIMATE_TIME
-    ESTIMATE_TIME=$((${ESTIMATE_TIME_ARR[0]} * 60 + ${ESTIMATE_TIME_ARR[1]}))
-    ELAPSED_TIME=$(bc <<< "$ELAPSED_TIME - ($(float_to_int $ELAPSED_TIME) - $ESTIMATE_TIME)")
+    estimate_time=$(echo $LAST_LINE | awk '{print $4}')
+    readarray -d ":" -t ESTIMATE_TIME_ARR <<< $estimate_time
+    estimate_time=$((10#${ESTIMATE_TIME_ARR[0]} * 60 + 10#${ESTIMATE_TIME_ARR[1]}))
+    elapsed_time=$(bc <<< "$elapsed_time - ($(float_to_int $elapsed_time) - $estimate_time)")
 
-    LOCAL_AVERAGE_CPU=$(float_to_int $(echo $LAST_LINE | awk '{print $5}'))
-    LOCAL_AVERAGE_RSS=$(echo $LAST_LINE | awk '{print $7}')
-    LOCAL_AVERAGE_VMS=$(echo $LAST_LINE | awk '{print $8}')
+    local_average_cpu=$(float_to_int $(echo $LAST_LINE | awk '{print $5}'))
+    local_average_rss=$(echo $LAST_LINE | awk '{print $7}')
+    local_average_vms=$(echo $LAST_LINE | awk '{print $8}')
 
     # Cut the last line from the file as it is only used for the total elapsed time
     # of the process under investigation.
     # Accumulate the sum of all readings for each measurement
     for line in $(cat $TEMP_FILE | sed \$d); do
         CURRENT_CPU=$(float_to_int $(echo $line | awk '{print $5}'))
-        LOCAL_AVERAGE_CPU=$(($LOCAL_AVERAGE_CPU + $CURRENT_CPU))
+        local_average_cpu=$(($local_average_cpu + $CURRENT_CPU))
 
         CURRENT_RSS=$(echo $line | awk '{print $7}')
-        LOCAL_AVERAGE_RSS=$(($LOCAL_AVERAGE_RSS + $CURRENT_RSS))
+        local_average_rss=$(($local_average_rss + $CURRENT_RSS))
 
         CURRENT_VMS=$(echo $line | awk '{print $8}')
-        LOCAL_AVERAGE_VMS=$(($LOCAL_AVERAGE_VMS + $CURRENT_VMS))
+        local_average_vms=$(($local_average_vms + $CURRENT_VMS))
     done
 
     # Calculate the average of each measurement
     NUM_OF_LINES=$(wc -l $TEMP_FILE | awk '{print $1}')
-    if [ $NUM_OF_LINES -ne 0 ]; then
-        LOCAL_AVERAGE_CPU=$(($LOCAL_AVERAGE_CPU / $NUM_OF_LINES))
-        LOCAL_AVERAGE_RSS=$(($LOCAL_AVERAGE_RSS / $NUM_OF_LINES))
-        LOCAL_AVERAGE_VMS=$(($LOCAL_AVERAGE_VMS / $NUM_OF_LINES))
+    if [ $NUM_OF_LINES -gt 2 ]; then
+        local_average_cpu=$(($local_average_cpu / $NUM_OF_LINES))
+        local_average_rss=$(($local_average_rss / $NUM_OF_LINES))
+        local_average_vms=$(($local_average_vms / $NUM_OF_LINES))
     fi
 
     # Safeguard against fractions rounded to 0.
-    if [ $LOCAL_AVERAGE_CPU -le 1 ]; then
-        LOCAL_AVERAGE_CPU=1
+    if [ $local_average_cpu -le 1 ]; then
+        local_average_cpu=1
     fi
-    if [ $LOCAL_AVERAGE_RSS -le 1 ]; then
-        LOCAL_AVERAGE_RSS=1
+    if [ $local_average_rss -le 1 ]; then
+        local_average_rss=1
     fi
-    if [ $LOCAL_AVERAGE_VMS -le 1 ]; then
-        LOCAL_AVERAGE_VMS=1
+    if [ $local_average_vms -le 1 ]; then
+        local_average_vms=1
     fi
 
     # Calculate the score
@@ -346,10 +343,10 @@ function time_taken() {
     # - Average VMS contributes to 10% (lower is better)
     #   - 100% = <=6000 ?? Based on algorithm ??
     #   - 0% = >=100,000
-    TIME_SCORE=$(bc <<< "(10 / $ELAPSED_TIME) * 50")
-    CPU_SCORE=$(((100 / $LOCAL_AVERAGE_CPU) * 30))
-    RSS_SCORE=$(((3000 / $LOCAL_AVERAGE_RSS) * 10))
-    VMS_SCORE=$(((6000 / $LOCAL_AVERAGE_VMS) * 10))
+    time_score=$(bc <<< "(10 / $elapsed_time) * 50")
+    cpu_score=$(((100 / $local_average_cpu) * 30))
+    rss_score=$(((3000 / $local_average_rss) * 10))
+    vms_score=$(((6000 / $local_average_vms) * 10))
 
     # Cleanup
     # - Delete temporary file(s)
@@ -358,22 +355,22 @@ function time_taken() {
     rm $TEMP_TIME_FILE
     IFS=$OG_IFS
 
-    echo "$ELAPSED_TIME $LOCAL_AVERAGE_CPU $LOCAL_AVERAGE_RSS $LOCAL_AVERAGE_VMS $(($TIME_SCORE + $CPU_SCORE + $RSS_SCORE + $VMS_SCORE))"
+    echo "$elapsed_time $local_average_cpu $local_average_rss $local_average_vms $(($time_score + $cpu_score + $rss_score + $vms_score))"
 }
 
 # Updates the global variables required to calculate the score of a language.
 #
 # Parameters:
 #   - The list of global variable values to update in the order:
-#     TIME_TAKEN, GLOBAL_AVERAGE_CPU, GLOBAL_AVERAGE_RSS, GLOBAL_AVERAGE_VMS, SCORE
+#     total_time, global_average_cpu, global_average_rss, global_average_vms, score
 # Returns:
 #   N/A
 function update_globals() {
-    TIME_TAKEN=$(bc <<< "$TIME_TAKEN + $1")
-    GLOBAL_AVERAGE_CPU=$(($GLOBAL_AVERAGE_CPU + $2))
-    GLOBAL_AVERAGE_RSS=$(($GLOBAL_AVERAGE_RSS + $3))
-    GLOBAL_AVERAGE_VMS=$(($GLOBAL_AVERAGE_VMS + $4))
-    SCORE=$(($SCORE + $5))
+    total_time=$(bc <<< "$total_time + $1")
+    global_average_cpu=$(($global_average_cpu + $2))
+    global_average_rss=$(($global_average_rss + $3))
+    global_average_vms=$(($global_average_vms + $4))
+    score=$(($score + $5))
 }
 
 # Resets the global variables required to calculate the score of a language.
@@ -383,10 +380,10 @@ function update_globals() {
 # Returns:
 #   N/A
 function reset_globals() {
-    GLOBAL_AVERAGE_CPU=0
-    GLOBAL_AVERAGE_RSS=0
-    GLOBAL_AVERAGE_VMS=0
-    SCORE=0
+    global_average_cpu=0
+    global_average_rss=0
+    global_average_vms=0
+    score=0
 }
 
 # Runs the toy programs
@@ -396,56 +393,63 @@ function reset_globals() {
 # Returns:
 #   N/A
 function bench_toy_programs() {
-    cd $PROGRAMS_DIR
-    for language in "${LANGUAGES[@]}"; do
-        if [ -d $language ]; then
-            cd $language
+    cd $PROGRAMS_DIR || exit 3
+    for language in $(find ./ -maxdepth 1 -type d | sed 1d); do
+        # Get rid of the leading './'
+        language=${language:2:${#language}}
+        # Capture for '-haxe' postfix of a language or any other pattern
+        # https://stackoverflow.com/a/18710850/5817020
+        if [[ $language =~ [a-zA-Z]*-[a-zA-Z0-9]* ]]; then
+            readarray -d "-" -t LANGUAGE <<< $language
+            lang="${LANGUAGE[0]}"
         else
-            continue
+            lang=$language
         fi
-        for algorithm in "${ALGORITHMS[@]}"; do
-            if [ -d $algorithm ]; then
-                cd $algorithm
-            else
-                continue
-            fi
 
-            case $language in
-                "rust")
+        cd $language || exit 3
+        for algorithm in $(find ./ -maxdepth 1 -type d | sed 1d); do
+           algorithm=${algorithm:2:${#algorithm}}
+            cd $algorithm || exit 3
+            case $lang in
+                rust)
                     rustc "${algorithm}_run.rs" -o "${algorithm}_run"
                     COMMAND="./${algorithm}_run"
                     if [ $TEST -eq 1 ]; then
                         echo "> Running Rust tests for $algorithm"
                         rustc --test "${algorithm}_test.rs" -o "${algorithm}_test"
                         ./${algorithm}_test
-                        if [ $(echo $?) -ne 0 ]; then
+                        if [ $? -ne 0 ]; then
                             exit 1
                         fi
                     fi
                     ;;
-                "go")
+                go)
                     go build -o "${algorithm}_run" .
                     COMMAND="./${algorithm}_run"
                     if [ $TEST -eq 1 ]; then
                         echo "> Running Go tests for $algorithm"
                         go test
-                        if [ $(echo $?) -ne 0 ]; then
+                        if [ $? -ne 0 ]; then
                             exit 1
                         fi
                     fi
                     ;;
-                "java")
-                    javac -cp .:$JUNIT:$HAMCREST *.java
-                    COMMAND="java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_run"
+                java)
+                    if [ $(find *.java 2> /dev/null | wc -l) -gt 0 ]; then
+                        javac -cp .:$JUNIT:$HAMCREST *.java
+                    fi
+                    # COMMAND="java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_run"
+                    jar -cvfe "${algorithm}_run.jar" "${algorithm}_run" . > /dev/null 2> /dev/null
+                    COMMAND="java -jar ${algorithm}_run.jar"
                     if [ $TEST -eq 1 ]; then
                         echo "> Running Java tests for $algorithm"
                         java -cp .:${JUNIT}:${HAMCREST} ${algorithm}_test
-                        if [ $(echo $?) -ne 0 ]; then
+                        if [ $? -ne 0 ]; then
                             exit 1
                         fi
                     fi
                     ;;
-                "c")
+                c)
                     # TODO: Try to implement both the normal executable and the -O2 optimisation
                     gcc -Wall -c "${algorithm}.c" "${algorithm}_run.c"
                     gcc -o "${algorithm}_run" "${algorithm}.o" "${algorithm}_run.o"
@@ -455,27 +459,27 @@ function bench_toy_programs() {
                         gcc -Wall -c "${algorithm}.c" "${algorithm}_test.c" $UNITY
                         gcc -o "${algorithm}_test" "${algorithm}.o" "${algorithm}_test.o" "unity.o"
                         ./${algorithm}_test
-                        if [ $(echo $?) -ne 0 ]; then
+                        if [ $? -ne 0 ]; then
                             exit 1
                         fi
                     fi
                     ;;
-                "python")
+                python)
                     COMMAND="python ${algorithm}_run.py"
                     if [ $TEST -eq 1 ]; then
                         echo "> Running Python tests for $algorithm"
                         pytest .
-                        if [ $(echo $?) -ne 0 ]; then
+                        if [ $? -ne 0 ]; then
                             exit 1
                         fi
                     fi
                     ;;
-                "haxe")
+                haxe)
                     COMMAND="haxe --main ${algorithm^}_Run.hx --interp"
                     if [ $TEST -eq 1 ]; then
                         echo "> Running Haxe tests for $algorithm"
                         haxe --main "${algorithm^}_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
-                        if [ $(echo $?) -ne 0 ]; then
+                        if [ $? -ne 0 ]; then
                             exit 1
                         fi
                     fi
@@ -487,41 +491,41 @@ function bench_toy_programs() {
 
             if [ $BENCHMARK -eq 1 ]; then
                 reset_globals
-                for count in $(eval echo {1..$RUNS}); do
+                for count in $(eval echo "{1..$RUNS}"); do
                     echo -ne "[${language}/${algorithm}-$(seq -f "%0${#RUNS}g" $count $count)]\t...\r"
                     # https://stackoverflow.com/questions/23564995/how-to-modify-a-global-variable-within-a-function-in-bash
                     readarray -d " " -t TIME_FNC <<< $(time_taken ${COMMAND})
                     update_globals ${TIME_FNC[@]}
                     if [ $VERBOSE -eq 1 ]; then
                         if [ $CSV -eq 1 ]; then
-                            echo -e "${language},${algorithm},$(seq -f "%0${#RUNS}g" $count $count),${TIME_TAKEN},${GLOBAL_AVERAGE_CPU},${GLOBAL_AVERAGE_RSS},${GLOBAL_AVERAGE_VMS},$SCORE" >> $BENCHMARKS_FILE 
+                            echo -e "${language},${algorithm},$(seq -f "%0${#RUNS}g" $count $count),${total_time},${global_average_cpu},${global_average_rss},${global_average_vms},$score" >> $BENCHMARKS_FILE
                         else
-                            echo -e "${language}|${algorithm}|$(seq -f "%0${#RUNS}g" $count $count)|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                            echo -e "${language}|${algorithm}|$(seq -f "%0${#RUNS}g" $count $count)|${total_time}|${global_average_cpu}|${global_average_rss}|${global_average_vms}|$score" >> $BENCHMARKS_FILE
                         fi
                         reset_globals
                     fi
                 done
 
-                echo -e "[${language}/${algorithm}-$(seq -f "%0${#RUNS}g" ${RUNS} ${RUNS})]\t...${TIME_TAKEN}s"
+                echo -e "[${language}/${algorithm}-$(seq -f "%0${#RUNS}g" ${RUNS} ${RUNS})]\t...${total_time}s"
                 if [ $VERBOSE -eq 0 ]; then
-                    GLOBAL_AVERAGE_CPU=$(( ${GLOBAL_AVERAGE_CPU} / $RUNS))
-                    GLOBAL_AVERAGE_RSS=$(( ${GLOBAL_AVERAGE_RSS} / $RUNS))
-                    GLOBAL_AVERAGE_VMS=$(( ${GLOBAL_AVERAGE_VMS} / $RUNS))
-                    SCORE=$(( ${SCORE} / $RUNS))
+                    global_average_cpu=$(($global_average_cpu / $RUNS))
+                    global_average_rss=$(($global_average_rss / $RUNS))
+                    global_average_vms=$(($global_average_vms / $RUNS))
+                    score=$(($score / $RUNS))
                     if [ $CSV -eq 1 ]; then
-                        echo -e "${language},${algorithm},${RUNS},${TIME_TAKEN},${GLOBAL_AVERAGE_CPU},${GLOBAL_AVERAGE_RSS},${GLOBAL_AVERAGE_VMS},$SCORE" >> $BENCHMARKS_FILE
+                        echo -e "${language},${algorithm},${RUNS},${total_time},${global_average_cpu},${global_average_rss},${global_average_vms},$score" >> $BENCHMARKS_FILE
                     else
-                        echo -e "${language}|${algorithm}|${RUNS}|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                        echo -e "${language}|${algorithm}|${RUNS}|${total_time}|${global_average_cpu}|${global_average_rss}|${global_average_vms}|$score" >> $BENCHMARKS_FILE
                     fi
                 fi
-                TIME_TAKEN=0
+                total_time=0
             fi
-            cd ..
+            cd .. || exit 3
             sleep $INTERVAL
         done
-        cd ..
+        cd .. || exit 3
     done
-    cd $PROGRAMS_DIR
+    cd $PROGRAMS_DIR || exit 3
 }
 
 # Runs the markdown parser
@@ -531,26 +535,37 @@ function bench_toy_programs() {
 # Returns:
 #   N/A
 function bench_markdowns() {
-    cd $MARKDOWN_DIR
-    for language in "${MARKDOWNS[@]}"; do
-        cd $language
-        case $language in
-            "python")
+    cd $MARKDOWN_DIR || exit 3
+    for language in $(find ./ -maxdepth 1 -type d | sed 1d); do
+        # Get rid of the leading './'
+        language=${language:2:${#language}}
+        # Capture for '-haxe' postfix of a language or any other pattern
+        # https://stackoverflow.com/a/18710850/5817020
+        if [[ $language =~ [a-zA-Z]*-[a-zA-Z0-9]* ]]; then
+            readarray -d "-" -t LANGUAGE <<< $language
+            lang="${LANGUAGE[0]}"
+        else
+            lang="$language"
+        fi
+
+        cd $language || exit 3
+        case $lang in
+            python)
                 COMMAND="python markdown_parser.py --demo"
                 if [ $TEST -eq 1 ]; then
                     echo "> Running Python tests for markdown parser"
                     pytest .
-                    if [ $(echo $?) -ne 0 ]; then
+                    if [ $? -ne 0 ]; then
                         exit 1
                     fi
                 fi
                 ;;
-            "haxe")
+            haxe)
                 COMMAND="haxe --run Markdown_Parser.hx --demo"
                 if [ $TEST -eq 1 ]; then
                     echo "> Running Haxe tests for markdown parser"
                     haxe --main "Markdown_Parser_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
-                    if [ $(echo $?) -ne 0 ]; then
+                    if [ $? -ne 0 ]; then
                         exit 1
                     fi
                 fi
@@ -568,79 +583,77 @@ function bench_markdowns() {
                 update_globals ${TIME_FNC[@]}
                 if [ $VERBOSE -eq 1 ]; then
                     if [ $CSV -eq 1 ]; then
-                        echo -e "${language},markdown-parser,$(seq -f "%0${#RUNS}g" $count $count),${TIME_TAKEN},${GLOBAL_AVERAGE_CPU},${GLOBAL_AVERAGE_RSS},${GLOBAL_AVERAGE_VMS},$SCORE" >> $BENCHMARKS_FILE 
+                        echo -e "${language},markdown-parser,$(seq -f "%0${#RUNS}g" $count $count),${total_time},${global_average_cpu},${global_average_rss},${global_average_vms},$score" >> $BENCHMARKS_FILE
                     else
-                        echo -e "${language}|markdown-parser|$(seq -f "%0${#RUNS}g" $count $count)|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                        echo -e "${language}|markdown-parser|$(seq -f "%0${#RUNS}g" $count $count)|${total_time}|${global_average_cpu}|${global_average_rss}|${global_average_vms}|$score" >> $BENCHMARKS_FILE
                     fi
                     reset_globals
                 fi
             done
 
-            echo -e "[${language}/markdown-parser-$(seq -f "%0${#RUNS}g" ${RUNS} ${RUNS})]\t...${TIME_TAKEN}s"
+            echo -e "[${language}/markdown-parser-$(seq -f "%0${#RUNS}g" ${RUNS} ${RUNS})]\t...${total_time}s"
             if [ $VERBOSE -eq 0 ]; then
-                GLOBAL_AVERAGE_CPU=$(( ${GLOBAL_AVERAGE_CPU} / $RUNS))
-                GLOBAL_AVERAGE_RSS=$(( ${GLOBAL_AVERAGE_RSS} / $RUNS))
-                GLOBAL_AVERAGE_VMS=$(( ${GLOBAL_AVERAGE_VMS} / $RUNS))
-                SCORE=$(( ${SCORE} / $RUNS))
+                global_average_cpu=$(($global_average_cpu / $RUNS))
+                global_average_rss=$(($global_average_rss / $RUNS))
+                global_average_vms=$(($global_average_vms / $RUNS))
+                score=$(($score / $RUNS))
                 if [ $CSV -eq 1 ]; then
-                    echo -e "${language},markdown-parser,${RUNS},${TIME_TAKEN},${GLOBAL_AVERAGE_CPU},${GLOBAL_AVERAGE_RSS},${GLOBAL_AVERAGE_VMS},$SCORE" >> $BENCHMARKS_FILE
+                    echo -e "${language},markdown-parser,${RUNS},${total_time},${global_average_cpu},${global_average_rss},${global_average_vms},$score" >> $BENCHMARKS_FILE
                 else
-                    echo -e "${language}|markdown-parser|${RUNS}|${TIME_TAKEN}|${GLOBAL_AVERAGE_CPU}|${GLOBAL_AVERAGE_RSS}|${GLOBAL_AVERAGE_VMS}|$SCORE" >> $BENCHMARKS_FILE
+                    echo -e "${language}|markdown-parser|${RUNS}|${total_time}|${global_average_cpu}|${global_average_rss}|${global_average_vms}|$score" >> $BENCHMARKS_FILE
                 fi
             fi
-            TIME_TAKEN=0
+            total_time=0
             # File created from the markdown parser.
             rm "parsed.html"
         fi
-        cd ..
+        cd .. || exit 3
         sleep $INTERVAL
     done
-    cd $CURRENT_DIR
+    cd $CURRENT_DIR || exit 3
 }
 
 # TODO: Add --clean flag to cleanup compiled files
 # FILES_TO_CLEANUP = ()
-TIME_TAKEN=0
+total_time=0
 cat /dev/null > $BENCHMARKS_FILE
 if [ $CSV -eq 1 ]; then
     echo -e "LANGUAGE,ALGORITHM,RUN,ELAPSED (s),Avg. CPU (%),Avg. RSS (KB),Avg. VMS (KB),SCORE" >> $BENCHMARKS_FILE
 else
     echo -e "LANGUAGE|ALGORITHM|RUN|ELAPSED (s)|Avg. CPU (%)|Avg. RSS (KB)|Avg. VMS (KB)|SCORE" >> $BENCHMARKS_FILE
 fi
-# ******************************************
-# ********** RUN THE TOY PROGRAMS **********
-# ******************************************
-bench_toy_programs
 
-# ******************************************
-# ******** RUN THE MARKDOWN PARSERS ********
-# ******************************************
+# RUN THE TOY PROGRAMS
+bench_toy_programs
+# RUN THE MARKDOWN PARSERS
 bench_markdowns
 
 if [ $BENCHMARK -eq 1 ] && [ $CSV -eq 0 ]; then
     BENCHMARKS_FILE_B="${BENCHMARKS_FILE}_B"
     cat $BENCHMARKS_FILE | column -t -s "|" > ${BENCHMARKS_FILE_B}
 
-    AVERAGE_SCORE=0
-    SCORES=$(cat $BENCHMARKS_FILE_B | sed 1d | awk '{print $8}')
-    readarray -d ' ' -t SCORES <<< $SCORES
-    COUNTER=0
-    for score in $SCORES; do
-        AVERAGE_SCORE=$(($AVERAGE_SCORE + $score))
-        COUNTER=$(($COUNTER + 1))
+    average_score=0
+    scores=$(cat $BENCHMARKS_FILE_B | sed 1d | awk '{print $8}')
+    readarray -d ' ' -t scores <<< $scores
+    counter=0
+    for score in $scores; do
+        average_score=$(($average_score + $score))
+        counter=$(($counter + 1))
     done
-    if [ $COUNTER -eq 0 ]; then
-        AVERAGE_SCORE=0
+    if [ $counter -eq 0 ]; then
+        average_score=0
     else
-        AVERAGE_SCORE=$(($AVERAGE_SCORE / $COUNTER))
+        average_score=$(($average_score / $counter))
     fi
 
     # Host machine information
-    echo -e "" >> $BENCHMARKS_FILE_B
-    echo -e "CPU:            $(get_cpu_name)" >> $BENCHMARKS_FILE_B
-    echo -e "Processors:     $(get_num_of_cores) Cores / $(get_num_of_processors) Threads" >> $BENCHMARKS_FILE_B
-    echo -e "Memory:         ~$(get_ram_in_gb) GB" >> $BENCHMARKS_FILE_B
-    echo -e "Average Score:  $AVERAGE_SCORE" >> $BENCHMARKS_FILE_B
+    {
+        echo -e ""
+        echo -e "CPU:            $(get_cpu_name)"
+        echo -e "Processors:     $(get_num_of_cores) Cores / $(get_num_of_processors) Threads"
+        echo -e "Memory:         ~$(get_ram_in_gb) GB"
+        echo -e "Average Score:  $average_score"
+    } >> "$BENCHMARKS_FILE_B"
 
     # Reading and writing to the same file at the same time causes data corruption
     # and an empty file.
@@ -652,6 +665,6 @@ elif [ $BENCHMARK -eq 1 ] && [ $CSV -eq 1 ]; then
 fi
 
 if [ $BENCHMARK -eq 1 ] && [ $DISPLAY -eq 1 ]; then
-    echo "                         -----------------------------------"
+    echo ""
     cat $BENCHMARKS_FILE
 fi

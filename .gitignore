@@ -6,7 +6,10 @@
 .coverage
 # Python cache
 __pycache__/
+*.pyc
 # C output files
 *.o
 # Benchmark outpout
 benchmarks/
+# Java JAR files
+*.jar
