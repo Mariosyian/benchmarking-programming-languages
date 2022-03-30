@@ -476,7 +476,7 @@ function bench_toy_programs() {
                     ;;
                 python)
                     COMMAND="python ${algorithm}_run.py"
-                    if [ $TEST -eq 1 ]; then
+                    if [ $TEST -eq 1 ] && [ $(pytest . --collect-only | grep "tests collected" | awk '{print $2}') != "no" ]; then
                         echo "> Running Python tests for $algorithm"
                         pytest .
                         if [ $? -ne 0 ]; then
