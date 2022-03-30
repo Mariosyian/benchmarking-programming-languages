@@ -89,6 +89,10 @@ do
                 $HAXE --main "${HAXE_ALGORITHM[*]^}_Test.hx" --library utest --interp -D UTEST_PRINT_TESTS
             done
             ;;
+        *)
+            echo "No entry for ($1). Try updating the circleCI script and try again."
+            exit 1
+            ;;
     esac
 done
 exit 0
