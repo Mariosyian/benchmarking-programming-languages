@@ -11,7 +11,7 @@ WORKDIR /home/benchmarking-programming-languages
 #       gcc -- version (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0
 #       make -- GNU Make 4.2.1
 #       curl -- 7.68.0
-RUN apt update && apt install make build-essential curl wget tar bc -y
+RUN apt update && apt install make build-essential curl wget tar -y
 
 # Install `column`
 RUN wget https://mirrors.edge.kernel.org/pub/linux/utils/util-linux/v2.35/util-linux-2.35-rc1.tar.gz
