@@ -11,7 +11,7 @@ WORKDIR /home/benchmarking-programming-languages
 #       gcc -- version (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0
 #       make -- GNU Make 4.2.1
 #       curl -- 7.68.0
-RUN apt update && apt install make build-essential curl wget tar -y
+RUN apt update && apt install make build-essential curl wget tar bc -y
 
 # Install `column`
 RUN wget https://mirrors.edge.kernel.org/pub/linux/utils/util-linux/v2.35/util-linux-2.35-rc1.tar.gz
@@ -45,6 +45,7 @@ RUN ln -s /home/benchmarking-programming-languages/haxe_20220306074705_e5eec31/h
 
 RUN if ! test -d /home/benchmarking-programming-languages; then mkdir /home/benchmarking-programming-languages && echo "Created directory /home/benchmarking-programming-languages."; fi
 COPY . /home/benchmarking-programming-languages
+RUN if ! test -d /home/benchmarking-programming-languages/benchmarks; then mkdir /home/benchmarking-programming-languages/benchmarks && echo "Created directory /home/benchmarking-programming-languages/benchmarks."; fi
 
 RUN pip install -r /home/benchmarking-programming-languages/requirements_dev.txt
 
