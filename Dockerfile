@@ -23,6 +23,7 @@ RUN cp .libs/column /bin/
 WORKDIR /home/benchmarking-programming-languages
 RUN rm -rf util-linux-2.35-rc1*
 
+# Install and setup any languages whose installation can be automated
 RUN apt install python3 pip -y
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN apt install default-jdk-headless -y
@@ -49,4 +50,4 @@ RUN if ! test -d /home/benchmarking-programming-languages/benchmarks; then mkdir
 
 RUN pip install -r /home/benchmarking-programming-languages/requirements_dev.txt
 
-CMD [ "/home/benchmarking-programming-languages/benchmark.sh", "-v" ]
+CMD [ "/home/benchmarking-programming-languages/benchmark.sh", "-d" ]

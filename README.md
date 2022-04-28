@@ -1,8 +1,12 @@
+[<img src="logo.png" alt="discord logo" width="200rem"/>](logo.png)
 # Benchmarking Programming Languages
 
-COMP30040 - 3rd Year Project - Benchmarking Programming Languages by Marios Yiannakou (marios.yiannakou@student.manchester.ac.uk)
+COMP30040 - 3rd Year Project - Benchmarking Programming Languages by Marios Yiannakou (marios.yiannakou@student.manchester.ac.uk | marios.yiannakou@hotmail.com)
 
 Supervisor: Bijan Parsia (bijan.parsia@manchester.ac.uk)
+
+# Discord
+Join my [Discord server](https://discord.gg/9S4tqXWb) to discuss your implementations with the rest of the community and compare ideas!
 
 # Introduction
 This project tackles/investigates the [*The Computer Language Benchmarks Game (Wikipedia)*](https://en.wikipedia.org/wiki/The_Computer_Language_Benchmarks_Game). An open-source software project, whose aim is to compare the implementations of a subset of simple algorithms in a plethora of programming languages, and determine (based on predetermined metrics) which is fastest in producing a result.
@@ -42,7 +46,7 @@ This project is written with easy expandability and cross-platform compatibility
 
 Write a suite of microtasks (known algorithms, mini programs i.e. <100 LOC) and benchmark them in many languages. The microtasks serve as a means of expanding the number of programming languages I can write a basic program in (i.e. tests that I can use programming concepts such as loops, conditionals, functions, etc). These will be timeboxed strictly as the program is known and something most people have probably come across during their career (job, studies, etc), and hence will only require basic Google searches or even one week of the languages "Getting started" tutorial to learn.
 
-Write a mid-size program (have chosen a shaved down version of a markdown parser) which will be specced by myself with the aim of being realistic as to how much I can implement in a short amount of time (about 4 weeks) and in a generous, but conservative number of languages. I'm not expecting that the markdown parser will have as many language implementations as the micro tasks, but should have at least 1 that I consider "exotic" for myself (i.e. not any languages I consider myself comfortable or familiar with).
+Write a mid-size program specced by myself (have chosen a [shaved down version](./markdown-parser/README.md) of a markdown parser) with the aim of being realistic as to how much I can implement in a short amount of time (about 4 weeks) and in a generous, but conservative number of languages. I'm not expecting that the markdown parser will have as many language implementations as the micro tasks, but should have at least 1 that I consider "exotic" for myself (i.e. not any languages I consider myself comfortable or familiar with).
 
 # Requirements
 ## Build from source code
@@ -52,9 +56,9 @@ For installation instructions on any of the following executables please refer t
 
 ### Pre-Requisites for the host machine
 - Ubuntu 20.04 or any UNIX environment to run `bash` scripts
-- Python (version 3.x.x) -- Personally used 3.9.7
     | Language | Version Used |
     |----------|--------------|
+    | Python (version 3.x.x) | 3.9.7 |
     | C (GCC) | (Ubuntu 9.4.0-1ubuntu1~20.04) 9.4.0 |
     | GNU make | 4.2.1 |
     | Java | (Docker container runs with JDK 11.0) but downloads `default-jdk-headless` |
@@ -63,7 +67,7 @@ For installation instructions on any of the following executables please refer t
     | Haxe | 4.2.5 |
 
 ## Build using Docker
-A docker image (can be [found](https://hub.docker.com/r/mariosyian/benchmarking-programming-languages) here) has been published which contains all pre-requisite libraries, language compilers/executables, and a Linux Ubuntu environment that can run the benchmark script.
+A docker image (which can be [found](https://hub.docker.com/r/mariosyian/benchmarking-programming-languages) here) has been published which contains all pre-requisite libraries, language compilers/executables, and a Linux Ubuntu environment that can run the benchmark script.
 
 ### Pre-Requisites for the host machine
 - docker
@@ -73,6 +77,12 @@ A docker image (can be [found](https://hub.docker.com/r/mariosyian/benchmarking-
         - Ubuntu: `sudo apt install docker`
 
 # Usage
+If you are using Docker and are unsure about your installation, you can run the `setup_and_run.sh` script that verifys if Docker has been installed and the Docker service is actively running on your machine.
+```
+$ ./setup_and_run.sh
+```
+
+## Manually
 A general purpose (and hopefully easily expandable) `benchmark.sh` bash script has been written and will continue to be developed/optimised to accommodate any new languages introduced either by myself or any community member that stumbles across this project.
 ```
 # Navigate to the root of this repository
@@ -83,15 +93,41 @@ $ ./benchmark.sh
 .
 # View the benchmark report
 $ more ./benchmarks/benchmarks
-LANGUAGE  ALGORITHM  ELAPSED (s)  Avg. CPU (%)  Avg. RSS (KB)  Avg. VMS (KB)  Score
-python    sieve      3            76            6644           12092          150
+LANGUAGE  ALGORITHM        RUN  ELAPSED (s)  Avg. CPU (%)  Avg. RSS (KB)  Avg. VMS (KB)  SCORE
+rust      sieve            10   28.699664    5307          112474         304986         230
+go        sieve            10   20.549223    586           156977         35932663       727
+java      sieve            10   20.565989    729           662307         24069962       608
+c         sieve            10   20.555779    613           29454          127875         821
+python    sieve            10   35.822788    6427          516759         1106586        158
+haxe      sieve            10   54.184947    8247          3488081        4058379        80
+python    markdown-parser  10   10.383249    102           167823         486129         3470
+haxe      markdown-parser  10   20.548773    511           1368331        1804429        800
 
-CPU: 			AMD Ryzen 9 3900X
-Processors: 	12 Cores / 24 Threads
-Memory: 		~15 GB
-Average Score: 	150
+CPU:            AMD Ryzen 9 3900X
+Processors:     12 Cores / 24 Threads
+Memory:         ~15 GB
+Average Score:  861
 ```
 
+## Docker
+The Docker image can be run with only the `-d` flag enabled, which runs each benchmark 100 times and displays the final averages, by running:
+```
+$ docker run mariosyian/benchmarking-programming-languages:2.2.2
+```
+or override the default behaviour by running:
+```
+$ docker run mariosyian/benchmarking-programming-languages:2.2.2 <override command>
+e.g.
+# Runs each benchmark 5 times, saves the results as a comma separated string, and prints them out on the console afterwards.
+$ docker run mariosyian/benchmarking-programming-languages:2.2.2 ./benchmark.sh -r 10 -d --csv
+```
+or launch a shell into the Docker container (note that no Volume has been set as the Docker image already occupies ~2GB of storage so any changes you make inside the Docker container will be lost) by running:
+```
+$ docker run -it mariosyian/benchmarking-programming-languages:2.2.2 sh
+$ ./benchmark.sh -r 5 -d
+
+# Press Ctrl + D to exit the container image
+```
 # Using dependency files
 
 Some of the languages used require some extra files to execute (i.e. Java requires an external testing suite framework as a JAR file, C requires the Unity testing framework as an external C library file). These could be downloaded manually, but since the idea of the project is that it should be easy for the average to beginner coder to pick it up and start coding. Environment setup should be of little to no concern hence, why some of the required libraries are included in the `dependencies` directory.

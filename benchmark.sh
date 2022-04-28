@@ -20,6 +20,8 @@
 #   - A file with the `_test` postfix to indicate this is the test file.
 #   - A file with the `_run` postfix which is a file that imports and calls the algorithm.
 #   - Optional: Any helper libraries required to run the algorithm.
+#         NOTE: Please avoid any further subdirectories as these could cause issues with the
+#               CircleCI configuration.
 #
 # Example directory structure
 # implementations
@@ -49,6 +51,8 @@
 #       runs the markdown parser, or calls a file that runs the markdown parser.
 #   - A file with the `_test` postfix to indicate this is the test file.
 #   - Optional: Any helper libraries required to run the algorithm.
+#         NOTE: Please avoid any further subdirectories as these could cause issues with the
+#               CircleCI configuration.
 #
 # Example directory structure
 # markdown-parser
@@ -114,6 +118,10 @@ HAMCREST="${DEPENDENCIES_DIR}/hamcrest/hamcrest-2.2.jar"
 UNITY="${DEPENDENCIES_DIR}/unity/unity.c"
 
 INTERVAL=1
+
+# Create the benchmarks directory if it doesn't exist
+if ! test -d $BENCHMARKS_DIR; then
+    mkdir $BENCHMARKS_DIR
 
 # Capture any CL flags provided
 BENCHMARK=1

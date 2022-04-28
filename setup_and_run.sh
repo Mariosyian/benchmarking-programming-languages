@@ -28,5 +28,10 @@ if ! systemctl is-active --quiet docker; then
         exit 1
 fi
 
-docker-compose up .
-exit 0
+if ! systemctl is-active --quiet docker; then
+    docker run .
+    exit 0
+else
+    echo "Something went wrong when attempting to start the docker service."
+    echo "Please start the docker service manually and rerun the setup script."
+    exit 2
